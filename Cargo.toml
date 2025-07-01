@@ -67,6 +67,7 @@ esp-backtrace = { version = "0.16.0", features = ["println", "esp32", "panic-han
 embedded-hal = "1.0.0"
 fugit = "0.3.7"
 heapless = "0.8.0"
+anyhow = { version = "1.0.98", default-features = false}
 
 
 [profile.dev]

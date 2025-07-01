@@ -1,5 +1,6 @@
-use crate::servo::{AnyServo, Servo, ServoTrait};
+use crate::servo::{AnyServo, Servo};
 
+use anyhow::Error;
 use embassy_time::Timer;
 use embedded_hal::pwm::SetDutyCycle;
 use esp_hal::gpio::AnyPin;
@@ -13,6 +14,31 @@ use heapless::Vec;
 use log::{error, info};
 extern crate alloc;
 use alloc::boxed::Box;
+
+#[embassy_executor::task]
+pub async fn servo_task(servo_pins: [AnyPin<'static>; 12], ledc: LEDC<'static>) {
+    info!("Starting servo task");
+    let mut ledc = Ledc::new(ledc);
+    ledc.set_global_slow_clock(LSGlobalClkSource::APBClk);
+
+    //Configure timers: Leak them to get static lifetime.
+    let (timer_low, timer_high) = create_configure_timers(&mut ledc).await;
+    let timer_low = Box::leak(Box::new(timer_low));
+    let timer_high = Box::leak(Box::new(timer_high));
+
+    let servos = creates_servos(servo_pins, &mut ledc, timer_low, timer_high).unwrap();
+
+    loop {
+        for mut servo in servos {
+            servo
+                .set_angle(0)
+                .unwrap_or_else(|_e| error!("Angle set failed"));
+
+            Timer::after_millis(500).await;
+        }
+        todo!();
+    }
+}
 
 pub async fn create_configure_timers(
     ledc: &mut Ledc<'static>,
@@ -45,21 +71,16 @@ pub async fn create_configure_timers(
     (timer_low, timer_high)
 }
 
-#[embassy_executor::task]
-pub async fn servo_task(servo_pins: [AnyPin<'static>; 12], ledc: LEDC<'static>) {
-    info!("Starting servo task");
-    let mut ledc = Ledc::new(ledc);
-    ledc.set_global_slow_clock(LSGlobalClkSource::APBClk);
-
-    //Configure timers: Leak them to get static lifetime.
-    let (timer_low, timer_high) = create_configure_timers(&mut ledc).await;
-    let timer_low = Box::leak(Box::new(timer_low));
-    let timer_high = Box::leak(Box::new(timer_high));
-    let [p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11] = servo_pins;
-
+pub fn creates_servos(
+    pins: [AnyPin<'static>; 12],
+    ledc: &mut Ledc<'static>,
+    timer_low: &'static timer::Timer<'static, LowSpeed>,
+    timer_high: &'static timer::Timer<'static, HighSpeed>,
+) -> Result<Vec<AnyServo, 12>, anyhow::Error> {
     //Create the vec of servos
     let mut servos: Vec<AnyServo, 12> = Vec::new();
 
+    let [p0, p1, p2, p3, p4, p5, p6, p7, p8, p9, p10, p11] = pins;
     let low_speed_channels: [Channel<'_, LowSpeed>; 8] = [
         ledc.channel(Number::Channel0, p0),
         ledc.channel(Number::Channel1, p1),
@@ -77,7 +98,7 @@ pub async fn servo_task(servo_pins: [AnyPin<'static>; 12], ledc: LEDC<'static>) 
                 duty_pct: 7,
                 pin_config: channel::config::PinConfig::PushPull,
             })
-            .expect("Fail configurating low speed channels");
+            .map_err(|_| anyhow::anyhow!("Configurating low"))?;
         let max_duty = channel.max_duty_cycle() as u32;
         let servo = Servo::new(channel, max_duty, HertzU32::from_raw(50));
         let _ = servos.push(AnyServo::Low(servo));
@@ -96,20 +117,11 @@ pub async fn servo_task(servo_pins: [AnyPin<'static>; 12], ledc: LEDC<'static>) 
                 duty_pct: 7,
                 pin_config: channel::config::PinConfig::PushPull,
             })
-            .expect("Fail configurating high speed channels");
+            .map_err(|_| anyhow::anyhow!("Configurating high"))?;
         let max_duty = channel.max_duty_cycle() as u32;
         let servo = Servo::new(channel, max_duty, HertzU32::from_raw(50));
         let _ = servos.push(AnyServo::High(servo));
     }
 
-    loop {
-        for mut servo in servos {
-            servo
-                .set_angle(0)
-                .unwrap_or_else(|_e| error!("Angle set failed"));
-
-            Timer::after_millis(500).await;
-        }
-        todo!();
-    }
+    Ok(servos)
 }

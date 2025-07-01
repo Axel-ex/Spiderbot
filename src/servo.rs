@@ -4,10 +4,7 @@ use log::info;
 
 use embedded_hal::pwm::SetDutyCycle;
 
-pub struct Servo<PWM>
-where
-    PWM: SetDutyCycle,
-{
+pub struct Servo<PWM> {
     pwm: PWM,
     angle: u8,
     max_duty: u32,
@@ -17,11 +14,6 @@ where
 pub enum AnyServo {
     Low(Servo<Channel<'static, LowSpeed>>),
     High(Servo<Channel<'static, HighSpeed>>),
-}
-
-pub trait ServoTrait {
-    fn set_angle(&mut self, angle: u8) -> Result<(), ()>;
-    fn angle(&self) -> u8;
 }
 
 impl<PWM> Servo<PWM>
@@ -57,8 +49,8 @@ where
     }
 }
 
-impl ServoTrait for AnyServo {
-    fn set_angle(&mut self, angle: u8) -> Result<(), ()> {
+impl AnyServo {
+    pub fn set_angle(&mut self, angle: u8) -> Result<(), ()> {
         match self {
             AnyServo::Low(channel) => channel.set_angle(angle),
             AnyServo::High(channel) => channel.set_angle(angle),
