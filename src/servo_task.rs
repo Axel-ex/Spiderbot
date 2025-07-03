@@ -1,6 +1,5 @@
 use crate::servo::{AnyServo, Servo};
 
-use anyhow::Error;
 use embassy_time::Timer;
 use embedded_hal::pwm::SetDutyCycle;
 use esp_hal::gpio::AnyPin;
@@ -26,7 +25,9 @@ pub async fn servo_task(servo_pins: [AnyPin<'static>; 12], ledc: LEDC<'static>) 
     let timer_low = Box::leak(Box::new(timer_low));
     let timer_high = Box::leak(Box::new(timer_high));
 
-    let servos = creates_servos(servo_pins, &mut ledc, timer_low, timer_high).unwrap();
+    let servos = creates_servos(servo_pins, &mut ledc, timer_low, timer_high)
+        .await
+        .unwrap();
 
     loop {
         for mut servo in servos {
@@ -71,7 +72,7 @@ pub async fn create_configure_timers(
     (timer_low, timer_high)
 }
 
-pub fn creates_servos(
+pub async fn creates_servos(
     pins: [AnyPin<'static>; 12],
     ledc: &mut Ledc<'static>,
     timer_low: &'static timer::Timer<'static, LowSpeed>,

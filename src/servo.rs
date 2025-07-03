@@ -31,6 +31,9 @@ where
 
     fn set_angle(&mut self, angle: u8) -> Result<(), ()> {
         let angle = angle.clamp(0, 180);
+        if self.angle == angle {
+            return Ok(());
+        }
         self.angle = angle;
 
         // Convert angle (0–180) to pulse width (500–2500 us)
