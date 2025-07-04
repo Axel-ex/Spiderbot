@@ -3,7 +3,7 @@
 debug/
 target/
 .vscode/
-# .gitignore
+.gitignore
 .DS_Store/
 .cargo/
 

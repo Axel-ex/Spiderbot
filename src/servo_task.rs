@@ -143,6 +143,7 @@ pub async fn creates_servos(
                 pin_config: channel::config::PinConfig::PushPull,
             })
             .map_err(|_| anyhow::anyhow!("Configurating low"))?;
+
         let max_duty = channel.max_duty_cycle() as u32;
         let servo = Servo::new(channel, max_duty, HertzU32::from_raw(50));
         let _ = servos.push(AnyServo::Low(servo));
@@ -163,7 +164,6 @@ pub async fn creates_servos(
             })
             .map_err(|_| anyhow::anyhow!("Configurating high"))?;
 
-        channel.set_duty_cycle(19).unwrap();
         let max_duty = channel.max_duty_cycle() as u32;
         let servo = Servo::new(channel, max_duty, HertzU32::from_raw(50));
         let _ = servos.push(AnyServo::High(servo));
