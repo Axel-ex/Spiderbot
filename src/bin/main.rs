@@ -6,6 +6,8 @@
     holding buffers for the duration of a data transfer."
 )]
 
+use core::future::pending;
+
 use bt_hci::controller::ExternalController;
 use embassy_executor::Spawner;
 use embassy_time::Timer;
@@ -73,7 +75,6 @@ async fn main(spawner: Spawner) {
     spawner.spawn(servo_task(servo_pins, p.LEDC)).unwrap();
 
     loop {
-        Timer::after_secs(2).await;
-        info!("Main task..");
+        pending::<()>().await;
     }
 }

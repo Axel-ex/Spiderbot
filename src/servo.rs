@@ -1,6 +1,6 @@
 use esp_hal::ledc::{channel::Channel, HighSpeed, LowSpeed};
 use fugit::Hertz;
-use log::info;
+use log::debug;
 
 use embedded_hal::pwm::SetDutyCycle;
 
@@ -29,29 +29,47 @@ where
         }
     }
 
-    fn set_angle(&mut self, angle: u8) -> Result<(), ()> {
+    /// Sets the servo angle in degrees.
+    ///
+    /// # Arguments
+    /// * `angle` - A value between 0 and 180 degrees. Values outside this range are clamped.
+    ///
+    /// # Returns
+    /// * `Ok(())` on success
+    /// * `Err(())` if the PWM driver fails to update the duty cycle
+    pub fn set_angle(&mut self, angle: u8) -> Result<(), ()> {
         let angle = angle.clamp(0, 180);
+
+        //Avoid setting the same angle again
         if self.angle == angle {
             return Ok(());
         }
         self.angle = angle;
 
         // Convert angle (0–180) to pulse width (500–2500 us)
-        let min_pulse = 500;
-        let max_pulse = 2400;
-        let pulse = min_pulse + ((angle as u32 * (max_pulse - min_pulse)) as u32 / 180);
-        let period_us = 1_000_000 / self.frequency.raw();
+        let min_pulse = 500; // microseconds (0°)
+        let max_pulse = 2400; //microseconds (180°)
 
+        // Linearly interpolate the pulse
+        let pulse = min_pulse + ((angle as u32 * (max_pulse - min_pulse)) as u32 / 180);
+        // e.g.: 90° -> 1450 µs
+
+        // Scale pulse to PWM register resolution
+        // Example: 1450 µs / 20000 µs * 255 ≈ 18
+        let period_us = 1_000_000 / self.frequency.raw();
         let duty = ((pulse * self.max_duty) / period_us).min(self.max_duty) as u16;
-        info!("duty: {duty:?}");
+        debug!("duty: {duty:?}");
         self.pwm.set_duty_cycle(duty).map_err(|_| ())
     }
 
-    fn angle(&self) -> u8 {
+    pub fn angle(&self) -> u8 {
         self.angle
     }
 }
 
+/// The AnyServo enum serves as a wrapper around servos that might old different underlying
+/// channels (lowSpeed and HighSpeed). This way we can treat the servos as the same objects despite
+/// their differences (e.g. to store in a vector)
 impl AnyServo {
     pub fn set_angle(&mut self, angle: u8) -> Result<(), ()> {
         match self {

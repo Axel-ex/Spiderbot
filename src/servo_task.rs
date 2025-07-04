@@ -41,6 +41,7 @@ pub async fn servo_task(servo_pins: [AnyPin<'static>; 12], ledc: LEDC<'static>) 
     }
 }
 
+// Configure timer to count at 50Hz (20 000 us) in a 8bit register (max duty = 255)
 pub async fn create_configure_timers(
     ledc: &mut Ledc<'static>,
 ) -> (
@@ -72,6 +73,9 @@ pub async fn create_configure_timers(
     (timer_low, timer_high)
 }
 
+/// Create the channel and configure them in loop
+/// create the servos by wrapping tem into ANyServo to get the same behaviour no matter the
+/// underlying channel speed
 pub async fn creates_servos(
     pins: [AnyPin<'static>; 12],
     ledc: &mut Ledc<'static>,
