@@ -56,6 +56,7 @@ where
 
         // Scale pulse to PWM register resolution
         // Example: 1450 µs / 20000 µs * 255 ≈ 18
+        // THE WIDTH OF THE PULSE DRIVES THE ANGLE, NOT FREQ
         let period_us = 1_000_000 / self.frequency.raw();
         let duty = ((pulse * self.max_duty) / period_us).min(self.max_duty) as u16;
         debug!("duty: {duty:?}");
