@@ -1,20 +1,20 @@
 use micromath::F32Ext;
 
 // ROBOT SIZE
-const LENGTH_A: f32 = 55.0;
-const LENGTH_B: f32 = 77.5;
-const LENGTH_C: f32 = 27.5;
-const LENGTH_SIDE: f32 = 71.0;
-const Z_ABSOLUTE: f32 = -28.0;
+pub const LENGTH_A: f32 = 55.0;
+pub const LENGTH_B: f32 = 77.5;
+pub const LENGTH_C: f32 = 27.5;
+pub const LENGTH_SIDE: f32 = 71.0;
+pub const Z_ABSOLUTE: f32 = -28.0;
 
 ///CONST FOR MOVEMENT
-const Z_DEFAULT: f32 = -50.0;
-const Z_UP: f32 = -30.0;
-const Z_BOOT: f32 = Z_ABSOLUTE;
-const X_DEFAULT: f32 = 62.0;
-const X_OFFSET: f32 = 0.0;
-const Y_START: f32 = 0.0;
-const Y_STEP: f32 = 40.0;
+pub const Z_DEFAULT: f32 = -50.0;
+pub const Z_UP: f32 = -30.0;
+pub const Z_BOOT: f32 = Z_ABSOLUTE;
+pub const X_DEFAULT: f32 = 62.0;
+pub const X_OFFSET: f32 = 0.0;
+pub const Y_START: f32 = 0.0;
+pub const Y_STEP: f32 = 40.0;
 
 /// functions parameter
 const KEEP: f32 = 255.0;

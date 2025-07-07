@@ -53,7 +53,6 @@ async fn main(spawner: Spawner) {
 
     let timer0 = TimerGroup::new(p.TIMG1);
     esp_hal_embassy::init(timer0.timer0);
-    info!("Embassy initialized");
 
     // take important peripherals
     let mut rng = esp_hal::rng::Rng::new(p.RNG);
@@ -92,6 +91,7 @@ async fn main(spawner: Spawner) {
         seed,
     );
 
+    info!("Starting spider robot...");
     spawner
         .spawn(servo_task(servo_pins, p.LEDC))
         .expect("Fail spawning servo task");
