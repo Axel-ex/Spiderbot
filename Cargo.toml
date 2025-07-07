@@ -5,7 +5,7 @@ version = "0.1.0"
 
 [[bin]]
 name = "spider_robot"
-path = "./src/bin/main.rs"
+path = "./src/main.rs"
 test = false
 bench = false
 
@@ -69,7 +69,6 @@ fugit = "0.3.7"
 heapless = "0.8.0"
 anyhow = { version = "1.0.98", default-features = false}
 micromath = "2.1.0" # sqrt calculation
-once_cell = {version = "1.21.3", features = ["critical-section"]}
 
 [profile.dev]
 # Rust debug is too slow.

@@ -17,8 +17,8 @@ use esp_hal::clock::CpuClock;
 use esp_hal::gpio::{AnyPin, Pin};
 use esp_hal::timer::timg::TimerGroup;
 use log::info;
-use spider_robot::net_task::{configurate_and_start_wifi, runner_task, tcp_server};
-use spider_robot::servo_task::servo_task;
+use spider_robot::tasks::net_task::{configurate_and_start_wifi, runner_task, tcp_server};
+use spider_robot::tasks::servo_task::servo_task;
 
 esp_bootloader_esp_idf::esp_app_desc!();
 

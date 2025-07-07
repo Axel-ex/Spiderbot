@@ -1,6 +1,4 @@
-use critical_section::Mutex;
 use micromath::F32Ext;
-use once_cell::sync::Lazy;
 
 // ROBOT SIZE
 const LENGTH_A: f32 = 55.0;
@@ -21,9 +19,9 @@ const Y_STEP: f32 = 40.0;
 /// functions parameter
 const KEEP: f32 = 255.0;
 
-/// Stores the constant that need runtime op like sqrty or cos
+/// Stores the constant that need runtime op like sqrt or cos
 #[derive(Debug)]
-struct RobotConfig {
+pub struct RobotConfig {
     pub temp_a: f32,
     pub temp_b: f32,
     pub temp_c: f32,
@@ -31,7 +29,7 @@ struct RobotConfig {
     pub turn_x1: f32,
     pub turn_y1: f32,
     pub turn_x0: f32,
-    pub turn_y1: f32,
+    pub turn_y0: f32,
 }
 
 impl RobotConfig {
@@ -47,7 +45,7 @@ impl RobotConfig {
         let turn_x1 = (temp_a - LENGTH_SIDE) / 2.0;
         let turn_y1 = (Y_START + Y_STEP) / 2.0;
         let turn_x0 = turn_x1 - temp_b * temp_a.cos();
-        let turn_y1 = temp_b * temp_alpha.sin() - turn_y1 - LENGTH_SIDE;
+        let turn_y0 = temp_b * temp_alpha.sin() - turn_y1 - LENGTH_SIDE;
 
         Self {
             temp_a,
@@ -57,10 +55,7 @@ impl RobotConfig {
             turn_x1,
             turn_y1,
             turn_x0,
-            turn_y1,
+            turn_y0,
         }
     }
 }
-
-//SITE FOR TURN
-const TURN_X1: f32 = (TEMP_A - LENGTH_SIDE) / 2;
