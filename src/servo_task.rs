@@ -1,5 +1,4 @@
 use crate::servo::{AnyServo, Servo};
-use esp_hal::gpio::Pin;
 extern crate alloc;
 
 use alloc::boxed::Box;
@@ -9,44 +8,11 @@ use esp_hal::gpio::AnyPin;
 use esp_hal::ledc::channel::{self, Channel, ChannelIFace, Number};
 use esp_hal::ledc::timer::{HSClockSource, LSClockSource, TimerIFace};
 use esp_hal::ledc::{timer, HighSpeed, LSGlobalClkSource, Ledc, LowSpeed};
-use esp_hal::peripherals::GPIO17;
 use esp_hal::peripherals::LEDC;
 use esp_hal::time::Rate;
 use fugit::HertzU32;
 use heapless::Vec;
 use log::{error, info};
-
-/// Test high speed channel with a specific pin
-#[embassy_executor::task]
-pub async fn test_hs_pwm(servo_pin: GPIO17<'static>, ledc: LEDC<'static>) {
-    let mut ledc = Ledc::new(ledc);
-    ledc.set_global_slow_clock(LSGlobalClkSource::APBClk);
-
-    let mut timer = ledc.timer::<HighSpeed>(timer::Number::Timer0);
-    timer
-        .configure(timer::config::Config {
-            duty: timer::config::Duty::Duty8Bit,
-            clock_source: HSClockSource::APBClk,
-            frequency: Rate::from_hz(50),
-        })
-        .unwrap();
-
-    let mut channel = ledc.channel(Number::Channel0, servo_pin.degrade());
-    channel
-        .configure(channel::config::Config {
-            timer: &timer,
-            duty_pct: 7,
-            pin_config: channel::config::PinConfig::PushPull,
-        })
-        .unwrap();
-
-    loop {
-        channel.set_duty_cycle(19).unwrap(); // ~7.5%
-        Timer::after_millis(1500).await;
-        channel.set_duty_cycle(10).unwrap(); // ~4%
-        Timer::after_millis(1500).await;
-    }
-}
 
 #[embassy_executor::task]
 pub async fn servo_task(servo_pins: [AnyPin<'static>; 12], ledc: LEDC<'static>) {
@@ -64,13 +30,6 @@ pub async fn servo_task(servo_pins: [AnyPin<'static>; 12], ledc: LEDC<'static>) 
         .unwrap();
 
     loop {
-        for servo in servos.iter_mut() {
-            servo
-                .set_angle(180)
-                .unwrap_or_else(|_e| error!("Angle set failed"));
-
-            Timer::after_millis(500).await;
-        }
         for servo in servos.iter_mut() {
             servo
                 .set_angle(0)
@@ -95,7 +54,7 @@ pub async fn create_configure_timers(
     //Configure timers
     timer_low
         .configure(timer::config::Config {
-            duty: timer::config::Duty::Duty10Bit,
+            duty: timer::config::Duty::Duty11Bit,
             clock_source: LSClockSource::APBClk,
             frequency: Rate::from_hz(50),
         })
@@ -104,7 +63,7 @@ pub async fn create_configure_timers(
 
     timer_high
         .configure(timer::config::Config {
-            duty: timer::config::Duty::Duty10Bit,
+            duty: timer::config::Duty::Duty11Bit,
             clock_source: HSClockSource::APBClk,
             frequency: Rate::from_hz(50),
         })
@@ -143,7 +102,6 @@ pub async fn creates_servos(
                 pin_config: channel::config::PinConfig::PushPull,
             })
             .map_err(|_| anyhow::anyhow!("Configurating low"))?;
-
         let max_duty = channel.max_duty_cycle() as u32;
         let servo = Servo::new(channel, max_duty, HertzU32::from_raw(50));
         let _ = servos.push(AnyServo::Low(servo));
