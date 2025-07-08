@@ -6,9 +6,9 @@ use embassy_net::{tcp::TcpSocket, IpListenEndpoint, Stack};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Sender};
 use embassy_time::{Duration, Timer};
 use esp_wifi::wifi::{ClientConfiguration, WifiController, WifiDevice};
-use log::{error, info};
+use log::{debug, error, info};
 
-use super::motion_task::Command;
+use crate::commands::Command;
 
 /// Keeps the net stack up. (processes network events)
 #[embassy_executor::task]
@@ -58,9 +58,10 @@ pub async fn tcp_server(
         loop {
             match socket.read(&mut buf).await {
                 Ok(n) => {
-                    info!("received: {n} bytes");
-                    // TODO: parse the input
-                    // send the appropriate command to the motion task
+                    debug!("received: {n} bytes");
+                    if let Some(cmd) = parse_input(&buf) {
+                        cmd_sender.send(cmd).await;
+                    }
                     break;
                 }
                 Err(e) => {
@@ -72,6 +73,12 @@ pub async fn tcp_server(
         socket.close();
         Timer::after_millis(20).await;
     }
+}
+
+pub fn parse_input(buf: &[u8; 256]) -> Option<Command> {
+    let cmd = None;
+
+    cmd
 }
 
 pub async fn configurate_and_start_wifi(wifi_controller: &mut WifiController<'_>) {

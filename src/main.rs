@@ -19,7 +19,7 @@ use esp_hal::clock::CpuClock;
 use esp_hal::gpio::{AnyPin, Pin};
 use esp_hal::timer::timg::TimerGroup;
 use log::info;
-use spider_robot::tasks::motion_task::Command;
+use spider_robot::commands::Command;
 use spider_robot::tasks::net_task::{configurate_and_start_wifi, runner_task, tcp_server};
 use spider_robot::tasks::servo_task::servo_task;
 
@@ -97,18 +97,16 @@ async fn main(spawner: Spawner) {
         seed,
     );
 
-    let sender = CMD_CHANNEL.sender();
-
     info!("Starting spider robot...");
     spawner
         .spawn(servo_task(servo_pins, p.LEDC))
         .expect("Fail spawning servo task");
-    // spawner
-    //     .spawn(runner_task(runner))
-    //     .expect("Fail spawning runner task"); //keeps net stack alive
-    // spawner
-    //     .spawn(tcp_server(stack))
-    //     .expect("Fail spawning net task"); //Listen for tcp commands to forward to motion task
+    spawner
+        .spawn(runner_task(runner))
+        .expect("Fail spawning runner task"); //keeps net stack alive
+    spawner
+        .spawn(tcp_server(stack, CMD_CHANNEL.sender()))
+        .expect("Fail spawning net task"); //Listen for tcp commands to forward to motion task
 
     loop {
         pending::<()>().await;

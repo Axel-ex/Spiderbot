@@ -1,5 +1,6 @@
 #![no_std]
 
+pub mod commands;
 pub mod config;
 pub mod gait_engine;
 pub mod servo;
