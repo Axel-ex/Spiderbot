@@ -3,9 +3,12 @@ extern crate alloc;
 use alloc::string::String;
 use core::str::FromStr;
 use embassy_net::{tcp::TcpSocket, IpListenEndpoint, Stack};
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Sender};
 use embassy_time::{Duration, Timer};
 use esp_wifi::wifi::{ClientConfiguration, WifiController, WifiDevice};
 use log::{error, info};
+
+use super::motion_task::Command;
 
 /// Keeps the net stack up. (processes network events)
 #[embassy_executor::task]
@@ -16,7 +19,10 @@ pub async fn runner_task(mut runner: embassy_net::Runner<'static, WifiDevice<'st
 //TODO: This task will be constructed with a channel, that communicates the right enum variant upon
 //receiving the corresponding tcp packet
 #[embassy_executor::task]
-pub async fn tcp_server(stack: Stack<'static>) {
+pub async fn tcp_server(
+    stack: Stack<'static>,
+    cmd_sender: Sender<'static, CriticalSectionRawMutex, Command, 3>,
+) {
     info!("Waiting for network link..");
     while !stack.is_link_up() {
         Timer::after_millis(200).await;
@@ -53,6 +59,8 @@ pub async fn tcp_server(stack: Stack<'static>) {
             match socket.read(&mut buf).await {
                 Ok(n) => {
                     info!("received: {n} bytes");
+                    // TODO: parse the input
+                    // send the appropriate command to the motion task
                     break;
                 }
                 Err(e) => {
@@ -62,7 +70,7 @@ pub async fn tcp_server(stack: Stack<'static>) {
             }
         }
         socket.close();
-        Timer::after_millis(200).await;
+        Timer::after_millis(20).await;
     }
 }
 
@@ -75,6 +83,7 @@ pub async fn configurate_and_start_wifi(wifi_controller: &mut WifiController<'_>
         ..Default::default()
     });
 
+    info!("Connecting to wifi: {ssid}");
     wifi_controller
         .set_configuration(&config)
         .expect("fail setting configuration of wifi controller");
@@ -89,5 +98,9 @@ pub async fn configurate_and_start_wifi(wifi_controller: &mut WifiController<'_>
         .await
         .inspect_err(|e| error!("An error occured trying to connect to wifi: {e:?}"))
         .unwrap();
-    info!("Wifi connected!");
+
+    match wifi_controller.rssi().ok() {
+        Some(rssi) => info!("Wifi connected! signal: {}", rssi),
+        None => info!("Wifi connected!"),
+    }
 }

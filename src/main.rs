@@ -12,11 +12,14 @@ use alloc::boxed::Box;
 use core::future::pending;
 use embassy_executor::Spawner;
 use embassy_net::{Config as NetConfig, StackResources};
+use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
+use embassy_sync::channel::Channel;
 use esp_backtrace as _;
 use esp_hal::clock::CpuClock;
 use esp_hal::gpio::{AnyPin, Pin};
 use esp_hal::timer::timg::TimerGroup;
 use log::info;
+use spider_robot::tasks::motion_task::Command;
 use spider_robot::tasks::net_task::{configurate_and_start_wifi, runner_task, tcp_server};
 use spider_robot::tasks::servo_task::servo_task;
 
@@ -34,6 +37,9 @@ esp_bootloader_esp_idf::esp_app_desc!();
 //     loop {}
 // }
 //
+static CMD_CHANNEL: Channel<CriticalSectionRawMutex, Command, 3> = Channel::new();
+static ANGLE_CHANNEL: Channel<CriticalSectionRawMutex, [u8; 12], 3> = Channel::new();
+
 macro_rules! mk_static {
     ($t:ty, $val:expr) => {{
         static STATIC_CELL: static_cell::StaticCell<$t> = static_cell::StaticCell::new();
@@ -43,18 +49,19 @@ macro_rules! mk_static {
 
 #[esp_hal_embassy::main]
 async fn main(spawner: Spawner) {
+    //Boilerplate to init clocks, setup the heap and take important peripherals
     esp_println::logger::init_logger_from_env();
-
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let p = esp_hal::init(config);
 
     esp_alloc::heap_allocator!(size: 32 * 1024);
     esp_alloc::heap_allocator!(#[unsafe(link_section = ".dram2_uninit")] size: 96 * 1024);
 
+    // Start the embassy runtime
     let timer0 = TimerGroup::new(p.TIMG1);
     esp_hal_embassy::init(timer0.timer0);
 
-    // take important peripherals
+    // Init wifi
     let mut rng = esp_hal::rng::Rng::new(p.RNG);
     let timer1 = TimerGroup::new(p.TIMG0);
     let wifi_init = esp_wifi::init(timer1.timer0, rng, p.RADIO_CLK)
@@ -62,7 +69,6 @@ async fn main(spawner: Spawner) {
     let wifi_init = Box::leak(Box::new(wifi_init));
     let (mut wifi_controller, interfaces) =
         esp_wifi::wifi::new(wifi_init, p.WIFI).expect("Failed to initialize WIFI controller");
-
     configurate_and_start_wifi(&mut wifi_controller).await;
 
     let servo_pins: [AnyPin<'static>; 12] = [
@@ -91,16 +97,18 @@ async fn main(spawner: Spawner) {
         seed,
     );
 
+    let sender = CMD_CHANNEL.sender();
+
     info!("Starting spider robot...");
     spawner
         .spawn(servo_task(servo_pins, p.LEDC))
         .expect("Fail spawning servo task");
     // spawner
     //     .spawn(runner_task(runner))
-    //     .expect("Fail spawning runner task");
+    //     .expect("Fail spawning runner task"); //keeps net stack alive
     // spawner
     //     .spawn(tcp_server(stack))
-    //     .expect("Fail spawning net task");
+    //     .expect("Fail spawning net task"); //Listen for tcp commands to forward to motion task
 
     loop {
         pending::<()>().await;

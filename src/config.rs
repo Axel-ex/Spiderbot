@@ -17,19 +17,28 @@ pub const Y_START: f32 = 0.0;
 pub const Y_STEP: f32 = 40.0;
 
 /// functions parameter
-const KEEP: f32 = 255.0;
+pub const KEEP: f32 = 255.0;
 
-/// Stores the constant that need runtime op like sqrt or cos
+/// Stores the constant that need runtime op like sqrt or cos and variable that will be dynamically
+/// use by the program like the speeds
 #[derive(Debug)]
 pub struct RobotConfig {
     pub temp_a: f32,
     pub temp_b: f32,
     pub temp_c: f32,
     pub temp_alpha: f32,
+
     pub turn_x1: f32,
     pub turn_y1: f32,
     pub turn_x0: f32,
     pub turn_y0: f32,
+
+    pub move_speed: f32,
+    pub speed_multiple: f32,
+    pub spot_turn_speed: f32,
+    pub leg_move_speed: f32,
+    pub body_move_speed: f32,
+    pub stand_seat_speed: f32,
 }
 
 impl RobotConfig {
@@ -47,15 +56,30 @@ impl RobotConfig {
         let turn_x0 = turn_x1 - temp_b * temp_a.cos();
         let turn_y0 = temp_b * temp_alpha.sin() - turn_y1 - LENGTH_SIDE;
 
+        let move_speed = 0.0;
+        let speed_multiple = 1.0;
+        let spot_turn_speed = 4.0;
+        let leg_move_speed = 8.0;
+        let body_move_speed = 3.0;
+        let stand_seat_speed = 1.0;
+
         Self {
             temp_a,
             temp_b,
             temp_c,
             temp_alpha,
+
             turn_x1,
             turn_y1,
             turn_x0,
             turn_y0,
+
+            move_speed,
+            speed_multiple,
+            spot_turn_speed,
+            leg_move_speed,
+            body_move_speed,
+            stand_seat_speed,
         }
     }
 }

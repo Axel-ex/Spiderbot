@@ -68,7 +68,10 @@ embedded-hal = "1.0.0"
 fugit = "0.3.7"
 heapless = "0.8.0"
 anyhow = { version = "1.0.98", default-features = false}
-micromath = "2.1.0" # sqrt calculation
+micromath = "2.1.0" # sqrt and power calculation
+embassy-sync = "0.7.0"
+# embassy-sync = { version = "0.7.0", features = [ "turbowakers", "log"] }
+
 
 [profile.dev]
 # Rust debug is too slow.
