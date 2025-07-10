@@ -19,18 +19,18 @@ use esp_hal::clock::CpuClock;
 use esp_hal::gpio::{AnyPin, Pin};
 use esp_hal::timer::timg::TimerGroup;
 use log::info;
-use spider_robot::commands::{ServoCommand, TcpCommand};
+use spider_robot::robot::commands::{ServoCommand, TcpCommand};
 use spider_robot::tasks::motion_task::motion_task;
 use spider_robot::tasks::net_task::{configurate_and_start_wifi, runner_task, tcp_server};
 use spider_robot::tasks::servo_task::servo_task;
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
-//LEGS: [mid, tip, tail]
+//LEGS: [femur, tibia, coxa]
 //FRONT_L: [32, 33, 25]
 //BOTTOM_L: [26, 27, 14]
 //FRONT_R: [12, 13, 19]
-//BOTTOM_R: [18, 5, 4]
+//BOTTOM_R: [18, 5, 17]
 
 // #[panic_handler]
 // fn panic(info: &core::panic::PanicInfo) -> ! {
@@ -99,18 +99,18 @@ async fn main(spawner: Spawner) {
         seed,
     );
 
-    // spawner
-    //     .spawn(runner_task(runner))
-    //     .expect("Fail spawning runner task"); //keeps net stack alive
-    // spawner
-    //     .spawn(tcp_server(stack, TCP_CMD_CHANNEL.sender()))
-    //     .expect("Fail spawning net task"); //Listen for tcp commands to forward to motion task
-    // spawner
-    //     .spawn(motion_task(
-    //         TCP_CMD_CHANNEL.receiver(),
-    //         SERVO_CMD_CHANNEL.sender(),
-    //     ))
-    //     .expect("Fail spawning the motion task");
+    spawner
+        .spawn(runner_task(runner))
+        .expect("Fail spawning runner task"); //keeps net stack alive
+    spawner
+        .spawn(tcp_server(stack, TCP_CMD_CHANNEL.sender()))
+        .expect("Fail spawning net task"); //Listen for tcp commands to forward to motion task
+    spawner
+        .spawn(motion_task(
+            TCP_CMD_CHANNEL.receiver(),
+            SERVO_CMD_CHANNEL.sender(),
+        ))
+        .expect("Fail spawning the motion task");
     spawner
         .spawn(servo_task(servo_pins, p.LEDC, SERVO_CMD_CHANNEL.receiver()))
         .expect("Fail spawning servo task");

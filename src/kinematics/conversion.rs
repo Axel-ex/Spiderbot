@@ -2,7 +2,7 @@ use core::f32::consts::PI;
 use log::error;
 use micromath::F32Ext;
 
-use crate::{
+use crate::robot::{
     commands::ServoCommand,
     config::{LENGTH_A, LENGTH_B, LENGTH_C},
     servo::AnyServo,
@@ -73,9 +73,9 @@ pub fn polar_to_servo(
         }
     }
     //TODO:Handle error
-    servos[leg_id][0].set_angle(f32_to_u8(alpha)).unwrap();
-    servos[leg_id][1].set_angle(f32_to_u8(beta)).unwrap();
-    servos[leg_id][2].set_angle(f32_to_u8(gamma)).unwrap();
+    servos[leg_id][0].set_angle(f32_to_u8(alpha));
+    servos[leg_id][1].set_angle(f32_to_u8(beta));
+    servos[leg_id][2].set_angle(f32_to_u8(gamma));
 }
 
 pub fn movement_is_done(cmd: &ServoCommand) -> bool {

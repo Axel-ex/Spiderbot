@@ -1,7 +1,5 @@
-use crate::{
-    commands::{ServoCommand, TcpCommand},
-    gait_engine::GaitEngine,
-};
+use crate::kinematics::gait_engine::GaitEngine;
+use crate::robot::commands::{ServoCommand, TcpCommand};
 use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex,
     channel::{Receiver, Sender},

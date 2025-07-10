@@ -1,47 +1,10 @@
-use core::fmt::Display;
-
+use crate::robot::{joint::Joint, leg::Leg};
 use esp_hal::ledc::{channel::Channel, HighSpeed, LowSpeed};
 use fugit::Hertz;
 use log::{debug, error};
 
 use embedded_hal::pwm::SetDutyCycle;
-
-pub enum Leg {
-    FrontLeft = 0,
-    BottomLeft = 1,
-    FrontRight = 2,
-    BottomRight = 3,
-}
-
-pub enum Joint {
-    Coxa = 0,
-    Femur = 1,
-    Tibia = 2,
-}
-
-impl Display for Leg {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Leg::FrontLeft => f.write_str("Front left"),
-            Leg::FrontRight => f.write_str("Front right"),
-            Leg::BottomLeft => f.write_str("Bottom left"),
-            Leg::BottomRight => f.write_str("Bottom right"),
-        }
-    }
-}
-
-impl Display for Joint {
-    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
-        match self {
-            Joint::Coxa => f.write_str("coxa"),
-            Joint::Femur => f.write_str("femur"),
-            Joint::Tibia => f.write_str("tibia"),
-        }
-    }
-}
-
-// TODO: implement from usize for joint and leg
-
+#[derive(Debug)]
 pub struct Servo<PWM> {
     pwm: PWM,
     angle: u8,
@@ -54,6 +17,25 @@ pub struct Servo<PWM> {
 pub enum AnyServo {
     Low(Servo<Channel<'static, LowSpeed>>),
     High(Servo<Channel<'static, HighSpeed>>),
+}
+
+impl core::fmt::Debug for AnyServo {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            AnyServo::Low(servo) => f
+                .debug_struct("LowSpeedServo")
+                .field("angle", &servo.angle)
+                .field("leg", &servo.leg_id)
+                .field("joint", &servo.joint_id)
+                .finish(),
+            AnyServo::High(servo) => f
+                .debug_struct("HighSpeedServo")
+                .field("angle", &servo.angle)
+                .field("leg", &servo.leg_id)
+                .field("joint", &servo.joint_id)
+                .finish(),
+        }
+    }
 }
 
 impl<PWM> Servo<PWM>

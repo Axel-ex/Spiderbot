@@ -1,22 +1,26 @@
-use crate::servo::{AnyServo, Servo};
+use crate::robot::{
+    joint::Joint,
+    leg::Leg,
+    servo::{AnyServo, Servo},
+};
 extern crate alloc;
 
-use crate::commands::ServoCommand;
-use crate::gait_engine::MOVEMENT_COMPLETED;
-use crate::positions::{cartesian_to_polar, movement_is_done, polar_to_servo};
+use crate::kinematics::{
+    conversion::{cartesian_to_polar, movement_is_done, polar_to_servo},
+    gait_engine::MOVEMENT_COMPLETED,
+};
+use crate::robot::commands::ServoCommand;
 use alloc::boxed::Box;
-use core::array;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Receiver};
 use embassy_time::{Duration, Ticker, Timer};
 use embedded_hal::pwm::SetDutyCycle;
 use esp_hal::gpio::AnyPin;
-use esp_hal::ledc::channel::{self, Channel, ChannelIFace, Number};
+use esp_hal::ledc::channel::{self, ChannelIFace, Number};
 use esp_hal::ledc::timer::{HSClockSource, LSClockSource, TimerIFace};
 use esp_hal::ledc::{timer, HighSpeed, LSGlobalClkSource, Ledc, LowSpeed};
 use esp_hal::peripherals::LEDC;
 use esp_hal::time::Rate;
 use fugit::HertzU32;
-use heapless::Vec;
 use log::{error, info};
 
 #[embassy_executor::task]
@@ -36,7 +40,7 @@ pub async fn servo_task(
 
     let mut servos = creates_servos(servo_pins, &mut ledc, timer_low, timer_high)
         .await
-        .unwrap();
+        .expect("Fail creating the servos");
 
     loop {
         let cmd = receiver.receive().await;
@@ -181,26 +185,38 @@ pub async fn creates_servos(
             channel
                 .configure(channel::config::Config {
                     timer: timer_high,
-                    duty_pct: 7,
+                    duty_pct: 0,
                     pin_config: channel::config::PinConfig::PushPull,
                 })
                 .map_err(|_| anyhow::anyhow!("Failed to configure high speed channel {}", i))?;
 
             let max_duty = channel.max_duty_cycle() as u32;
-            AnyServo::High(Servo::new(channel, max_duty, HertzU32::from_raw(50)))
+            AnyServo::High(Servo::new(
+                channel,
+                max_duty,
+                HertzU32::from_raw(50),
+                Leg::from(leg),
+                Joint::from(joint),
+            ))
         } else {
             // Configure low speed channel
             let mut channel = ledc.channel(channel_num, pin);
             channel
                 .configure(channel::config::Config {
                     timer: timer_low,
-                    duty_pct: 7,
+                    duty_pct: 0,
                     pin_config: channel::config::PinConfig::PushPull,
                 })
                 .map_err(|_| anyhow::anyhow!("Failed to configure low speed channel {}", i))?;
 
             let max_duty = channel.max_duty_cycle() as u32;
-            AnyServo::Low(Servo::new(channel, max_duty, HertzU32::from_raw(50)))
+            AnyServo::Low(Servo::new(
+                channel,
+                max_duty,
+                HertzU32::from_raw(50),
+                Leg::from(leg),
+                Joint::from(joint),
+            ))
         };
 
         servo_array[leg][joint] = Some(servo);

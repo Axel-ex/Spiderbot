@@ -1,14 +1,13 @@
 extern crate alloc;
 
+use crate::robot::commands::TcpCommand;
 use alloc::string::String;
 use core::str::FromStr;
 use embassy_net::{tcp::TcpSocket, IpListenEndpoint, Stack};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Sender};
 use embassy_time::{Duration, Timer};
 use esp_wifi::wifi::{ClientConfiguration, WifiController, WifiDevice};
-use log::{debug, error, info};
-
-use crate::commands::TcpCommand;
+use log::{error, info};
 
 /// Keeps the net stack up. (processes network events)
 #[embassy_executor::task]
@@ -33,7 +32,7 @@ pub async fn tcp_server(
         match socket
             .accept(IpListenEndpoint {
                 port: 1234,
-                ..Default::default()
+                addr: None,
             })
             .await
         {

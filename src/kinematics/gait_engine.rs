@@ -1,5 +1,5 @@
-use crate::{commands::ServoCommand, config::*};
-use core::{f32, f64::consts::PI};
+use crate::robot::{commands::ServoCommand, config::*};
+use core::f32;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Sender, signal::Signal};
 use embassy_time::{with_timeout, Duration};
 use log::{error, info};
@@ -41,22 +41,25 @@ impl GaitEngine {
         self.set_site(2, X_DEFAULT + X_OFFSET, Y_START, Z_BOOT);
         self.set_site(1, X_DEFAULT + X_OFFSET, Y_START, Z_BOOT);
 
-        for leg_id in 0..4 {
-            for i in 0..3 {
-                self.current_pos[leg_id][i] = self.expected_pos[leg_id][i];
+        for leg in 0..4 {
+            for joint in 0..3 {
+                self.current_pos[leg][joint] = self.expected_pos[leg][joint];
             }
         }
         info!("Spider robot initialized!");
     }
 
     /// Send the internal state of the gait engine to the servo task and update position (it
-    /// assumes the command always succeed)
+    /// assumes the command always succeed) //TODO: should it fail? watchdog? clean state?
     pub async fn send_cmd(&mut self) {
         let cmd = ServoCommand::new(self.current_pos, self.expected_pos, self.temp_speed);
         self.servo_cmd_sender.send(cmd).await;
 
-        //update the current position for the next iteration
-        self.current_pos = self.expected_pos;
+        // wait for the notification from the servo task
+        match with_timeout(Duration::from_secs(3), MOVEMENT_COMPLETED.wait()).await {
+            Ok(_) => self.current_pos = self.expected_pos,
+            Err(_) => error!("[MOTION_TASK] command timed out"),
+        }
     }
 
     pub async fn sit(&mut self) {
@@ -66,10 +69,6 @@ impl GaitEngine {
             self.set_site(leg, KEEP, KEEP, Z_BOOT);
         }
         self.send_cmd().await;
-        match with_timeout(Duration::from_secs(2), MOVEMENT_COMPLETED.wait()).await {
-            Ok(_) => info!("sit command success"),
-            Err(_) => error!("Sit command timed out"),
-        }
     }
 
     pub async fn stand(&mut self) {
@@ -78,13 +77,11 @@ impl GaitEngine {
             self.set_site(leg, KEEP, KEEP, Z_DEFAULT);
         }
         self.send_cmd().await;
-        MOVEMENT_COMPLETED.wait().await;
     }
 
     pub async fn step_forward(&mut self, _times: u8) {
         self.set_site(0, self.config.turn_x1, self.config.turn_y1, KEEP);
         self.send_cmd().await;
-        MOVEMENT_COMPLETED.wait().await;
         info!("[MOTION_TASK] step_forward completed!");
     }
 
@@ -104,13 +101,10 @@ impl GaitEngine {
             for _ in 0..times {
                 self.set_site(2, self.config.turn_x1, self.config.turn_y1, 50.0);
                 self.send_cmd().await;
-                MOVEMENT_COMPLETED.wait().await;
                 self.set_site(2, self.config.turn_x0, self.config.turn_y0, 50.0);
                 self.send_cmd().await;
-                MOVEMENT_COMPLETED.wait().await;
             }
             self.set_site(2, x_tmp, y_tmp, z_tmp);
-            MOVEMENT_COMPLETED.wait().await;
             self.config.move_speed = 1.0;
             self.body_left(15).await;
         } else {
@@ -124,14 +118,11 @@ impl GaitEngine {
             for _ in 0..times {
                 self.set_site(0, self.config.turn_x1, self.config.turn_y1, 50.0);
                 self.send_cmd().await;
-                MOVEMENT_COMPLETED.wait().await;
                 self.set_site(0, self.config.turn_x0, self.config.turn_y0, 50.0);
                 self.send_cmd().await;
-                MOVEMENT_COMPLETED.wait().await;
             }
             self.set_site(0, x_tmp, y_tmp, z_tmp);
             self.send_cmd().await;
-            MOVEMENT_COMPLETED.wait().await;
             self.config.move_speed = 1.0;
             self.body_right(15).await;
         }
