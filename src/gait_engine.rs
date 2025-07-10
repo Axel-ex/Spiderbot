@@ -1,8 +1,10 @@
-use crate::config::*;
+use crate::{commands::ServoCommand, config::*};
 use core::f32;
-use embassy_time::Timer;
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Sender, signal::Signal};
 use log::info;
 use micromath::F32Ext;
+
+pub static MOVEMENT_COMPLETED: Signal<CriticalSectionRawMutex, ()> = Signal::new();
 
 /// State machine that calculate movements and update its posisions and speed accordingly
 pub struct GaitEngine {
@@ -10,20 +12,20 @@ pub struct GaitEngine {
     expected_pos: [[f32; 3]; 4], // expected coordinates
     temp_speed: [[f32; 3]; 4],  // Speed to reach expected pos.
     config: RobotConfig,
+    servo_cmd_sender: Sender<'static, CriticalSectionRawMutex, ServoCommand, 3>, //channel for ServoCommand
 }
 
-/// The enine can be in several possible state and transition between them. when it updates its
-/// position, it simply add temp_speed to the coordinates and recalculates the speed (since the
-/// distances change, the further, the faster). we can then wait forr all position to be reached by
-/// checking if the current positions are the same as the expected ones
 impl GaitEngine {
-    pub fn new() -> Self {
+    pub fn new(
+        servo_cmd_sender: Sender<'static, CriticalSectionRawMutex, ServoCommand, 3>,
+    ) -> Self {
         let current_pos = [[0.0; 3]; 4];
         let expected_pos = [[0.0; 3]; 4];
         let temp_speed = [[0.0; 3]; 4];
         let config = RobotConfig::new();
 
         Self {
+            servo_cmd_sender,
             current_pos,
             expected_pos,
             temp_speed,
@@ -44,6 +46,71 @@ impl GaitEngine {
             }
         }
         info!("Spider robot initialized!");
+    }
+
+    /// Send the internal state of the gait engine to the servo task
+    pub async fn send_cmd(&mut self) {
+        let cmd = ServoCommand::new(self.current_pos, self.expected_pos, self.temp_speed);
+        self.servo_cmd_sender.send(cmd).await;
+    }
+
+    pub async fn step_forward(&mut self, times: u8) {
+        self.set_site(0, self.config.turn_x1, self.config.turn_y1, KEEP);
+        self.send_cmd().await;
+        MOVEMENT_COMPLETED.wait().await;
+        //TODO: Update position
+        info!("[MOTION_TASK] step_forward completed!");
+    }
+
+    /// Move front right leg or front left depending on?
+    pub async fn say_hi(&mut self, times: u8) {
+        let (x_tmp, y_tmp, z_tmp);
+
+        if self.current_pos[3][1] == Y_START {
+            // NOTE: WHat?
+            self.body_right(15).await;
+            x_tmp = self.current_pos[2][0];
+            y_tmp = self.current_pos[2][1];
+            z_tmp = self.current_pos[2][2];
+            self.config.move_speed = self.config.body_move_speed; //update the move speed before
+                                                                  //setting sites
+
+            for _ in 0..times {
+                self.set_site(2, self.config.turn_x1, self.config.turn_y1, 50.0);
+                self.send_cmd().await;
+                MOVEMENT_COMPLETED.wait().await;
+                self.set_site(2, self.config.turn_x0, self.config.turn_y0, 50.0);
+                self.send_cmd().await;
+                MOVEMENT_COMPLETED.wait().await;
+            }
+            self.set_site(2, x_tmp, y_tmp, z_tmp);
+            MOVEMENT_COMPLETED.wait().await;
+            self.config.move_speed = 1.0;
+            self.body_left(15).await;
+        } else {
+            self.body_left(15).await;
+            x_tmp = self.current_pos[0][0];
+            y_tmp = self.current_pos[0][1];
+            z_tmp = self.current_pos[0][2];
+            self.config.move_speed = self.config.body_move_speed; //update the move speed before
+                                                                  //setting sites
+
+            for _ in 0..times {
+                self.set_site(0, self.config.turn_x1, self.config.turn_y1, 50.0);
+                self.send_cmd().await;
+                MOVEMENT_COMPLETED.wait().await;
+                self.set_site(0, self.config.turn_x0, self.config.turn_y0, 50.0);
+                self.send_cmd().await;
+                MOVEMENT_COMPLETED.wait().await;
+            }
+            self.set_site(0, x_tmp, y_tmp, z_tmp);
+            self.send_cmd().await;
+            MOVEMENT_COMPLETED.wait().await;
+            self.config.move_speed = 1.0;
+            self.body_right(15).await;
+            //TODO: Update the position
+        }
+        info!("[MOTION TASK] say hi completed!")
     }
 
     /// Update expected site and temp_speed
@@ -80,21 +147,21 @@ impl GaitEngine {
         }
     }
 
-    pub async fn wait_reach(&mut self, leg_id: usize) {
-        loop {
-            if self.current_pos[leg_id][0] == self.expected_pos[leg_id][0]
-                && self.current_pos[leg_id][1] == self.expected_pos[leg_id][1]
-                && self.current_pos[leg_id][2] == self.expected_pos[leg_id][2]
-            {
-                break;
-            }
-            Timer::after_millis(1).await;
-        }
+    async fn body_left(&mut self, i: i32) {
+        self.set_site(0, self.current_pos[0][0] + i as f32, KEEP, KEEP);
+        self.set_site(1, self.current_pos[1][0] + i as f32, KEEP, KEEP);
+        self.set_site(2, self.current_pos[2][0] - i as f32, KEEP, KEEP);
+        self.set_site(3, self.current_pos[3][0] - i as f32, KEEP, KEEP);
+        self.send_cmd().await;
+        MOVEMENT_COMPLETED.wait().await;
     }
 
-    pub async fn wait_all_reach(&mut self) {
-        for leg_id in 0..4 {
-            self.wait_reach(leg_id).await;
-        }
+    async fn body_right(&mut self, i: i32) {
+        self.set_site(0, self.current_pos[0][0] - i as f32, KEEP, KEEP);
+        self.set_site(1, self.current_pos[1][0] - i as f32, KEEP, KEEP);
+        self.set_site(2, self.current_pos[2][0] + i as f32, KEEP, KEEP);
+        self.set_site(3, self.current_pos[3][0] + i as f32, KEEP, KEEP);
+        self.send_cmd().await;
+        MOVEMENT_COMPLETED.wait().await;
     }
 }

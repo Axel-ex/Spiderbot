@@ -1,7 +1,11 @@
 use crate::servo::{AnyServo, Servo};
 extern crate alloc;
 
+use crate::commands::ServoCommand;
+use crate::gait_engine::MOVEMENT_COMPLETED;
+use crate::positions::{cartesian_to_polar, polar_to_servo};
 use alloc::boxed::Box;
+use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Receiver};
 use embassy_time::Timer;
 use embedded_hal::pwm::SetDutyCycle;
 use esp_hal::gpio::AnyPin;
@@ -15,7 +19,11 @@ use heapless::Vec;
 use log::{error, info};
 
 #[embassy_executor::task]
-pub async fn servo_task(servo_pins: [AnyPin<'static>; 12], ledc: LEDC<'static>) {
+pub async fn servo_task(
+    servo_pins: [AnyPin<'static>; 12],
+    ledc: LEDC<'static>,
+    receiver: Receiver<'static, CriticalSectionRawMutex, ServoCommand, 3>,
+) {
     info!("Starting servo task");
     let mut ledc = Ledc::new(ledc);
     ledc.set_global_slow_clock(LSGlobalClkSource::APBClk);
@@ -30,13 +38,35 @@ pub async fn servo_task(servo_pins: [AnyPin<'static>; 12], ledc: LEDC<'static>) 
         .unwrap();
 
     loop {
-        for servo in servos.iter_mut() {
-            servo
-                .set_angle(0)
-                .unwrap_or_else(|_e| error!("Angle set failed"));
+        let cmd = receiver.receive().await;
+        info!("[SERVO_TASK] Received a command!");
+        update_position(cmd).await;
+        //increment and sleep until all servo reached their position
+    }
+}
 
-            Timer::after_millis(500).await;
-        }
+/// Update position in a straight line at 50Hz
+pub async fn update_position(cmd: ServoCommand) {
+    // let timer = Timer
+    for _ in 0..3 {
+        Timer::after_millis(20).await;
+    }
+    MOVEMENT_COMPLETED.signal(());
+    loop {
+        //increment the current position
+        //check if the positions have been reached
+        //break or sleep for 20millis
+    }
+    MOVEMENT_COMPLETED.signal(());
+}
+
+pub async fn calibrate(servos: &mut Vec<AnyServo, 12>) {
+    for servo in servos.iter_mut() {
+        servo
+            .set_angle(90)
+            .unwrap_or_else(|_e| error!("Angle set failed"));
+
+        Timer::after_millis(500).await;
     }
 }
 

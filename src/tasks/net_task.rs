@@ -8,7 +8,7 @@ use embassy_time::{Duration, Timer};
 use esp_wifi::wifi::{ClientConfiguration, WifiController, WifiDevice};
 use log::{debug, error, info};
 
-use crate::commands::Command;
+use crate::commands::TcpCommand;
 
 /// Keeps the net stack up. (processes network events)
 #[embassy_executor::task]
@@ -21,7 +21,7 @@ pub async fn runner_task(mut runner: embassy_net::Runner<'static, WifiDevice<'st
 #[embassy_executor::task]
 pub async fn tcp_server(
     stack: Stack<'static>,
-    cmd_sender: Sender<'static, CriticalSectionRawMutex, Command, 3>,
+    cmd_sender: Sender<'static, CriticalSectionRawMutex, TcpCommand, 3>,
 ) {
     info!("Waiting for network link..");
     while !stack.is_link_up() {
@@ -40,6 +40,7 @@ pub async fn tcp_server(
 
     loop {
         info!("Listening for incoming TCP connections..");
+        //WARN: This can lead to infinite loop
         if socket
             .accept(IpListenEndpoint {
                 addr: None,
@@ -59,8 +60,11 @@ pub async fn tcp_server(
             match socket.read(&mut buf).await {
                 Ok(n) => {
                     debug!("received: {n} bytes");
-                    if let Some(cmd) = parse_input(&buf) {
+                    let data = &buf[..n];
+                    if let Ok(cmd) = TcpCommand::try_from(core::str::from_utf8(data).unwrap()) {
                         cmd_sender.send(cmd).await;
+                    } else {
+                        info!("Couldnt parse the cmd");
                     }
                     break;
                 }
@@ -73,12 +77,6 @@ pub async fn tcp_server(
         socket.close();
         Timer::after_millis(20).await;
     }
-}
-
-pub fn parse_input(buf: &[u8; 256]) -> Option<Command> {
-    let cmd = None;
-
-    cmd
 }
 
 pub async fn configurate_and_start_wifi(wifi_controller: &mut WifiController<'_>) {

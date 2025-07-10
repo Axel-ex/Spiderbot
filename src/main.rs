@@ -19,7 +19,8 @@ use esp_hal::clock::CpuClock;
 use esp_hal::gpio::{AnyPin, Pin};
 use esp_hal::timer::timg::TimerGroup;
 use log::info;
-use spider_robot::commands::Command;
+use spider_robot::commands::{ServoCommand, TcpCommand};
+use spider_robot::tasks::motion_task::motion_task;
 use spider_robot::tasks::net_task::{configurate_and_start_wifi, runner_task, tcp_server};
 use spider_robot::tasks::servo_task::servo_task;
 
@@ -37,8 +38,8 @@ esp_bootloader_esp_idf::esp_app_desc!();
 //     loop {}
 // }
 //
-static CMD_CHANNEL: Channel<CriticalSectionRawMutex, Command, 3> = Channel::new();
-static ANGLE_CHANNEL: Channel<CriticalSectionRawMutex, [u8; 12], 3> = Channel::new();
+static TCP_CMD_CHANNEL: Channel<CriticalSectionRawMutex, TcpCommand, 3> = Channel::new();
+static SERVO_CMD_CHANNEL: Channel<CriticalSectionRawMutex, ServoCommand, 3> = Channel::new();
 
 macro_rules! mk_static {
     ($t:ty, $val:expr) => {{
@@ -50,6 +51,7 @@ macro_rules! mk_static {
 #[esp_hal_embassy::main]
 async fn main(spawner: Spawner) {
     //Boilerplate to init clocks, setup the heap and take important peripherals
+    info!("Starting spider robot...");
     esp_println::logger::init_logger_from_env();
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let p = esp_hal::init(config);
@@ -97,16 +99,21 @@ async fn main(spawner: Spawner) {
         seed,
     );
 
-    info!("Starting spider robot...");
-    spawner
-        .spawn(servo_task(servo_pins, p.LEDC))
-        .expect("Fail spawning servo task");
     spawner
         .spawn(runner_task(runner))
         .expect("Fail spawning runner task"); //keeps net stack alive
     spawner
-        .spawn(tcp_server(stack, CMD_CHANNEL.sender()))
+        .spawn(tcp_server(stack, TCP_CMD_CHANNEL.sender()))
         .expect("Fail spawning net task"); //Listen for tcp commands to forward to motion task
+    spawner
+        .spawn(motion_task(
+            TCP_CMD_CHANNEL.receiver(),
+            SERVO_CMD_CHANNEL.sender(),
+        ))
+        .expect("Fail spawning the motion task");
+    spawner
+        .spawn(servo_task(servo_pins, p.LEDC, SERVO_CMD_CHANNEL.receiver()))
+        .expect("Fail spawning servo task");
 
     loop {
         pending::<()>().await;
