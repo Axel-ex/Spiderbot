@@ -1,7 +1,6 @@
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, signal::Signal};
-
 pub enum TcpCommand {
     Sit,
+    Stand,
     Wave(u8),
     StepForward(u8),
     TurnLeft(i32),
@@ -22,6 +21,8 @@ impl TryFrom<&str> for TcpCommand {
         match tokens.next() {
             Some("w") => Ok(TcpCommand::Wave(1)),
             Some("d") => Ok(TcpCommand::StepForward(1)),
+            Some("r") => Ok(TcpCommand::Sit),
+            Some("s") => Ok(TcpCommand::Stand),
             _ => Err(ParseCommandError),
         }
     }

@@ -1,14 +1,54 @@
+use core::fmt::Display;
+
 use esp_hal::ledc::{channel::Channel, HighSpeed, LowSpeed};
 use fugit::Hertz;
-use log::debug;
+use log::{debug, error};
 
 use embedded_hal::pwm::SetDutyCycle;
+
+pub enum Leg {
+    FrontLeft = 0,
+    BottomLeft = 1,
+    FrontRight = 2,
+    BottomRight = 3,
+}
+
+pub enum Joint {
+    Coxa = 0,
+    Femur = 1,
+    Tibia = 2,
+}
+
+impl Display for Leg {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Leg::FrontLeft => f.write_str("Front left"),
+            Leg::FrontRight => f.write_str("Front right"),
+            Leg::BottomLeft => f.write_str("Bottom left"),
+            Leg::BottomRight => f.write_str("Bottom right"),
+        }
+    }
+}
+
+impl Display for Joint {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        match self {
+            Joint::Coxa => f.write_str("coxa"),
+            Joint::Femur => f.write_str("femur"),
+            Joint::Tibia => f.write_str("tibia"),
+        }
+    }
+}
+
+// TODO: implement from usize for joint and leg
 
 pub struct Servo<PWM> {
     pwm: PWM,
     angle: u8,
     max_duty: u32,
     frequency: Hertz<u32>,
+    leg_id: Leg,
+    joint_id: Joint,
 }
 
 pub enum AnyServo {
@@ -20,12 +60,14 @@ impl<PWM> Servo<PWM>
 where
     PWM: SetDutyCycle,
 {
-    pub fn new(pwm: PWM, max_duty: u32, period: Hertz<u32>) -> Self {
+    pub fn new(pwm: PWM, max_duty: u32, period: Hertz<u32>, leg_id: Leg, joint_id: Joint) -> Self {
         Self {
             pwm,
             angle: 0,
             max_duty,
             frequency: period,
+            leg_id,
+            joint_id,
         }
     }
 
@@ -37,12 +79,12 @@ where
     /// # Returns
     /// * `Ok(())` on success
     /// * `Err(())` if the PWM driver fails to update the duty cycle
-    pub fn set_angle(&mut self, angle: u8) -> Result<(), ()> {
+    pub fn set_angle(&mut self, angle: u8) {
         let angle = angle.clamp(0, 180);
 
         //Avoid setting the same angle again
         if self.angle == angle {
-            return Ok(());
+            return;
         }
         self.angle = angle;
 
@@ -60,7 +102,12 @@ where
         let period_us = 1_000_000 / self.frequency.raw();
         let duty = ((pulse * self.max_duty) / period_us).min(self.max_duty) as u16;
         debug!("duty: {duty:?}");
-        self.pwm.set_duty_cycle(duty).map_err(|_| ())
+        if let Err(e) = self.pwm.set_duty_cycle(duty) {
+            error!(
+                "{} {} Error writing angle {:?}",
+                self.leg_id, self.joint_id, e
+            );
+        }
     }
 
     pub fn angle(&self) -> u8 {
@@ -72,17 +119,17 @@ where
 /// channels (lowSpeed and HighSpeed). This way we can treat the servos as the same objects despite
 /// their differences (e.g. to store in a vector)
 impl AnyServo {
-    pub fn set_angle(&mut self, angle: u8) -> Result<(), ()> {
+    pub fn set_angle(&mut self, angle: u8) {
         match self {
-            AnyServo::Low(channel) => channel.set_angle(angle),
-            AnyServo::High(channel) => channel.set_angle(angle),
+            AnyServo::Low(servo) => servo.set_angle(angle),
+            AnyServo::High(servo) => servo.set_angle(angle),
         }
     }
 
     fn angle(&self) -> u8 {
         match self {
-            AnyServo::Low(channel) => channel.angle(),
-            AnyServo::High(channel) => channel.angle(),
+            AnyServo::Low(servo) => servo.angle(),
+            AnyServo::High(servo) => servo.angle(),
         }
     }
 }

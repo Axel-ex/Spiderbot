@@ -3,10 +3,11 @@ extern crate alloc;
 
 use crate::commands::ServoCommand;
 use crate::gait_engine::MOVEMENT_COMPLETED;
-use crate::positions::{cartesian_to_polar, polar_to_servo};
+use crate::positions::{cartesian_to_polar, movement_is_done, polar_to_servo};
 use alloc::boxed::Box;
+use core::array;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Receiver};
-use embassy_time::Timer;
+use embassy_time::{Duration, Ticker, Timer};
 use embedded_hal::pwm::SetDutyCycle;
 use esp_hal::gpio::AnyPin;
 use esp_hal::ledc::channel::{self, Channel, ChannelIFace, Number};
@@ -41,32 +42,51 @@ pub async fn servo_task(
         let cmd = receiver.receive().await;
         info!("[SERVO_TASK] Received a command!");
         update_position(cmd).await;
-        //increment and sleep until all servo reached their position
     }
 }
 
 /// Update position in a straight line at 50Hz
-pub async fn update_position(cmd: ServoCommand) {
-    // let timer = Timer
-    for _ in 0..3 {
-        Timer::after_millis(20).await;
-    }
-    MOVEMENT_COMPLETED.signal(());
+pub async fn update_position(mut cmd: ServoCommand) {
+    let mut ticker = Ticker::every(Duration::from_millis(20));
+    let (mut alpha, mut beta, mut gamma) = (0.0, 0.0, 0.0);
+
     loop {
-        //increment the current position
-        //check if the positions have been reached
-        //break or sleep for 20millis
+        for leg in 0..4 {
+            for joint in 0..3 {
+                if (cmd.current_pos[leg][joint] - cmd.expected_pos[leg][joint]).abs()
+                    >= cmd.temp_speed[leg][joint].abs()
+                {
+                    cmd.current_pos[leg][joint] += cmd.temp_speed[leg][joint];
+                } else {
+                    cmd.current_pos[leg][joint] = cmd.expected_pos[leg][joint];
+                }
+            }
+            cartesian_to_polar(
+                &mut alpha,
+                &mut beta,
+                &mut gamma,
+                cmd.current_pos[leg][0],
+                cmd.current_pos[leg][1],
+                cmd.current_pos[leg][2],
+            );
+            //TODO: write angles to the servos
+            //log progression of movement
+        }
+        if movement_is_done(&cmd) {
+            break;
+        }
+        ticker.next().await;
+        info!("[SERVO_TASK] moving servos...");
     }
     MOVEMENT_COMPLETED.signal(());
+    info!("[SERVO_TASK] movement completed");
 }
 
-pub async fn calibrate(servos: &mut Vec<AnyServo, 12>) {
-    for servo in servos.iter_mut() {
-        servo
-            .set_angle(90)
-            .unwrap_or_else(|_e| error!("Angle set failed"));
-
-        Timer::after_millis(500).await;
+pub async fn calibrate(servos: &mut [[AnyServo; 3]; 4]) {
+    for leg in 0..4 {
+        for joint in 0..3 {
+            servos[leg][joint].set_angle(90);
+        }
     }
 }
 
@@ -102,60 +122,90 @@ pub async fn create_configure_timers(
     (timer_low, timer_high)
 }
 
-/// Create the channel and configure them in loop
-/// create the servos by wrapping tem into ANyServo to get the same behaviour no matter the
-/// underlying channel speed
 pub async fn creates_servos(
     pins: [AnyPin<'static>; 12],
     ledc: &mut Ledc<'static>,
     timer_low: &'static timer::Timer<'static, LowSpeed>,
     timer_high: &'static timer::Timer<'static, HighSpeed>,
-) -> Result<Vec<AnyServo, 12>, anyhow::Error> {
-    let mut servos: Vec<AnyServo, 12> = Vec::new();
-
-    let [p32, p33, p25, p26, p27, p14, p12, p13, p19, p18, p5, p17] = pins;
-    let low_speed_channels: [Channel<'_, LowSpeed>; 8] = [
-        ledc.channel(Number::Channel0, p32),
-        ledc.channel(Number::Channel1, p33),
-        ledc.channel(Number::Channel2, p25),
-        ledc.channel(Number::Channel3, p26),
-        ledc.channel(Number::Channel4, p27),
-        ledc.channel(Number::Channel5, p14),
-        ledc.channel(Number::Channel6, p12),
-        ledc.channel(Number::Channel7, p13),
+) -> Result<[[AnyServo; 3]; 4], anyhow::Error> {
+    // Create array of options first
+    let mut servo_array: [[Option<AnyServo>; 3]; 4] = [
+        [None, None, None],
+        [None, None, None],
+        [None, None, None],
+        [None, None, None],
     ];
-    for mut channel in low_speed_channels {
-        channel
-            .configure(channel::config::Config {
-                timer: timer_low,
-                duty_pct: 7,
-                pin_config: channel::config::PinConfig::PushPull,
-            })
-            .map_err(|_| anyhow::anyhow!("Configurating low"))?;
-        let max_duty = channel.max_duty_cycle() as u32;
-        let servo = Servo::new(channel, max_duty, HertzU32::from_raw(50));
-        let _ = servos.push(AnyServo::Low(servo));
+
+    // Define the channel numbers for each pin
+    let channel_numbers = [
+        // Low speed channels (0-7)
+        Number::Channel0, // 0
+        Number::Channel1, // 1
+        Number::Channel2, // 2
+        Number::Channel3, // 3
+        Number::Channel4, // 4
+        Number::Channel5, // 5
+        Number::Channel6, // 6
+        Number::Channel7, // 7
+        // High speed channels (0-3)
+        Number::Channel0, // 8
+        Number::Channel1, // 9
+        Number::Channel2, // 10
+        Number::Channel3, // 11
+    ];
+
+    // Fill the array
+    for (i, pin) in pins.into_iter().enumerate() {
+        let (leg, joint) = match i {
+            0 => (0, 0),
+            1 => (0, 1),
+            2 => (0, 2), // Leg 0 (Front Right)
+            3 => (1, 0),
+            4 => (1, 1),
+            5 => (1, 2), // Leg 1 (Front Left)
+            6 => (2, 0),
+            7 => (2, 1),
+            8 => (2, 2), // Leg 2 (Back Right)
+            9 => (3, 0),
+            10 => (3, 1),
+            11 => (3, 2), // Leg 3 (Back Left)
+            _ => unreachable!(),
+        };
+
+        let channel_num = channel_numbers[i];
+        let is_high_speed = i >= 8;
+
+        let servo = if is_high_speed {
+            // Configure high speed channel
+            let mut channel = ledc.channel(channel_num, pin);
+            channel
+                .configure(channel::config::Config {
+                    timer: timer_high,
+                    duty_pct: 7,
+                    pin_config: channel::config::PinConfig::PushPull,
+                })
+                .map_err(|_| anyhow::anyhow!("Failed to configure high speed channel {}", i))?;
+
+            let max_duty = channel.max_duty_cycle() as u32;
+            AnyServo::High(Servo::new(channel, max_duty, HertzU32::from_raw(50)))
+        } else {
+            // Configure low speed channel
+            let mut channel = ledc.channel(channel_num, pin);
+            channel
+                .configure(channel::config::Config {
+                    timer: timer_low,
+                    duty_pct: 7,
+                    pin_config: channel::config::PinConfig::PushPull,
+                })
+                .map_err(|_| anyhow::anyhow!("Failed to configure low speed channel {}", i))?;
+
+            let max_duty = channel.max_duty_cycle() as u32;
+            AnyServo::Low(Servo::new(channel, max_duty, HertzU32::from_raw(50)))
+        };
+
+        servo_array[leg][joint] = Some(servo);
     }
 
-    let high_speed_channels: [Channel<'_, HighSpeed>; 4] = [
-        ledc.channel(Number::Channel0, p19),
-        ledc.channel(Number::Channel1, p18),
-        ledc.channel(Number::Channel2, p5),
-        ledc.channel(Number::Channel3, p17),
-    ];
-    for mut channel in high_speed_channels {
-        channel
-            .configure(channel::config::Config {
-                timer: timer_high,
-                duty_pct: 7,
-                pin_config: channel::config::PinConfig::PushPull,
-            })
-            .map_err(|_| anyhow::anyhow!("Configurating high"))?;
-
-        let max_duty = channel.max_duty_cycle() as u32;
-        let servo = Servo::new(channel, max_duty, HertzU32::from_raw(50));
-        let _ = servos.push(AnyServo::High(servo));
-    }
-
-    Ok(servos)
+    // Convert Option<AnyServo> to AnyServo
+    Ok(servo_array.map(|leg| leg.map(|s| s.expect("All servo positions should be filled"))))
 }

@@ -99,18 +99,18 @@ async fn main(spawner: Spawner) {
         seed,
     );
 
-    spawner
-        .spawn(runner_task(runner))
-        .expect("Fail spawning runner task"); //keeps net stack alive
-    spawner
-        .spawn(tcp_server(stack, TCP_CMD_CHANNEL.sender()))
-        .expect("Fail spawning net task"); //Listen for tcp commands to forward to motion task
-    spawner
-        .spawn(motion_task(
-            TCP_CMD_CHANNEL.receiver(),
-            SERVO_CMD_CHANNEL.sender(),
-        ))
-        .expect("Fail spawning the motion task");
+    // spawner
+    //     .spawn(runner_task(runner))
+    //     .expect("Fail spawning runner task"); //keeps net stack alive
+    // spawner
+    //     .spawn(tcp_server(stack, TCP_CMD_CHANNEL.sender()))
+    //     .expect("Fail spawning net task"); //Listen for tcp commands to forward to motion task
+    // spawner
+    //     .spawn(motion_task(
+    //         TCP_CMD_CHANNEL.receiver(),
+    //         SERVO_CMD_CHANNEL.sender(),
+    //     ))
+    //     .expect("Fail spawning the motion task");
     spawner
         .spawn(servo_task(servo_pins, p.LEDC, SERVO_CMD_CHANNEL.receiver()))
         .expect("Fail spawning servo task");

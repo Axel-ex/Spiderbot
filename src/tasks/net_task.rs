@@ -16,66 +16,59 @@ pub async fn runner_task(mut runner: embassy_net::Runner<'static, WifiDevice<'st
     runner.run().await;
 }
 
-//TODO: This task will be constructed with a channel, that communicates the right enum variant upon
-//receiving the corresponding tcp packet
 #[embassy_executor::task]
 pub async fn tcp_server(
     stack: Stack<'static>,
     cmd_sender: Sender<'static, CriticalSectionRawMutex, TcpCommand, 3>,
 ) {
-    info!("Waiting for network link..");
-    while !stack.is_link_up() {
-        Timer::after_millis(200).await;
-    }
-    if let Some(config) = stack.config_v4() {
-        info!("Net interface up: IP {:?}", config.address);
-    } else {
-        info!("Net interface up!");
-    }
-
     let mut rx_buf = [0u8; 512];
     let mut tx_buf = [0u8; 512];
-    let mut socket = TcpSocket::new(stack, &mut rx_buf, &mut tx_buf);
-    socket.set_timeout(Some(Duration::from_secs(2)));
 
     loop {
-        info!("Listening for incoming TCP connections..");
-        //WARN: This can lead to infinite loop
-        if socket
+        // Create NEW socket for each connection
+        let mut socket = TcpSocket::new(stack, &mut rx_buf, &mut tx_buf);
+        socket.set_timeout(Some(Duration::from_secs(2)));
+
+        info!("Waiting for connection...");
+        match socket
             .accept(IpListenEndpoint {
-                addr: None,
                 port: 1234,
+                ..Default::default()
             })
             .await
-            .is_err()
         {
-            error!("Socket accept failed");
-            continue;
-        }
-
-        info!("Client connected!");
-
-        let mut buf = [0u8; 256];
-        loop {
-            match socket.read(&mut buf).await {
-                Ok(n) => {
-                    debug!("received: {n} bytes");
-                    let data = &buf[..n];
-                    if let Ok(cmd) = TcpCommand::try_from(core::str::from_utf8(data).unwrap()) {
-                        cmd_sender.send(cmd).await;
-                    } else {
-                        info!("Couldnt parse the cmd");
-                    }
-                    break;
-                }
-                Err(e) => {
-                    error!("{:?}", e);
-                    break;
-                }
+            Ok(_) => {
+                info!("Client connected!");
+                handle_connection(&mut socket, &cmd_sender).await;
+            }
+            Err(e) => {
+                error!("Accept failed: {:?}", e);
+                Timer::after_millis(500).await; // Backoff delay
+                continue;
             }
         }
-        socket.close();
-        Timer::after_millis(20).await;
+    }
+}
+
+pub async fn handle_connection(
+    socket: &mut TcpSocket<'_>,
+    cmd_sender: &Sender<'static, CriticalSectionRawMutex, TcpCommand, 3>,
+) {
+    let mut buf = [0u8; 256];
+    loop {
+        match socket.read(&mut buf).await {
+            Ok(0) => break,
+            Ok(n) => {
+                if let Ok(cmd) = TcpCommand::try_from(core::str::from_utf8(&buf[..n]).unwrap()) {
+                    cmd_sender.send(cmd).await;
+                };
+                break; // Close after first command
+            }
+            Err(e) => {
+                error!("Read error: {:?}", e);
+                break;
+            }
+        }
     }
 }
 

@@ -20,16 +20,25 @@ pub async fn motion_task(
 
     loop {
         info!("[MOTION_TASK] listening for command...");
+        let stamp = "[MOTION_TASK] received";
         match tcp_cmd_receiver.receive().await {
             TcpCommand::StepForward(n) => {
+                info!("{stamp} step forward {n}");
                 gait.step_forward(n).await;
-                info!("[MOTION_TASK] receive step forward {n}");
             }
             TcpCommand::Wave(n) => {
+                info!("{stamp} wave command");
                 gait.say_hi(n).await;
-                info!("[MOTION_TASK] received wave command")
             }
-            _ => info!("[MOTION_TASK] received other command"),
+            TcpCommand::Sit => {
+                info!("{stamp} sit command");
+                gait.sit().await;
+            }
+            TcpCommand::Stand => {
+                info!("{stamp} stand command");
+                gait.stand().await;
+            }
+            _ => info!("{stamp} other command"),
         }
 
         ticker.next().await;
