@@ -1,7 +1,9 @@
 use core::fmt::Display;
-use core::ops::Index;
+use core::ops::{Index, IndexMut};
 
-#[derive(Debug)]
+use super::servo::AnyServo;
+
+#[derive(Debug, Clone, Copy)]
 pub enum Leg {
     FrontLeft = 0,
     BottomLeft = 1,
@@ -38,5 +40,25 @@ impl Index<Leg> for [[f32; 3]; 4] {
 
     fn index(&self, leg: Leg) -> &Self::Output {
         &self[leg as usize]
+    }
+}
+
+impl IndexMut<Leg> for [[f32; 3]; 4] {
+    fn index_mut(&mut self, leg: Leg) -> &mut Self::Output {
+        &mut self[leg as usize]
+    }
+}
+
+impl Index<Leg> for [[AnyServo; 3]; 4] {
+    type Output = [AnyServo; 3];
+
+    fn index(&self, leg: Leg) -> &Self::Output {
+        &self[leg as usize]
+    }
+}
+
+impl IndexMut<Leg> for [[AnyServo; 3]; 4] {
+    fn index_mut(&mut self, leg: Leg) -> &mut Self::Output {
+        &mut self[leg as usize]
     }
 }

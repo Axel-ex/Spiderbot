@@ -5,7 +5,7 @@ use embassy_sync::{
     channel::{Receiver, Sender},
 };
 use embassy_time::{Duration, Ticker};
-use log::info;
+use log::{debug, info};
 
 #[embassy_executor::task]
 pub async fn motion_task(
@@ -14,19 +14,25 @@ pub async fn motion_task(
 ) {
     let mut ticker = Ticker::every(Duration::from_millis(20));
     let mut gait = GaitEngine::new(servo_cmd_sender);
-    gait.init_positions();
+    gait.init_positions().await;
+    debug!("Gait engine inited!\n {gait:?}");
+    info!("{:?}", gait.config());
 
     loop {
         info!("[MOTION_TASK] listening for command...");
         let stamp = "[MOTION_TASK] received";
         match tcp_cmd_receiver.receive().await {
+            TcpCommand::Calibrate => {
+                info!("{stamp} calibrate");
+                gait.calibrate().await;
+            }
             TcpCommand::StepForward(n) => {
                 info!("{stamp} step forward {n}");
                 gait.step_forward(n).await;
             }
             TcpCommand::Wave(n) => {
                 info!("{stamp} wave command");
-                gait.say_hi(n).await;
+                gait.wave(n).await;
             }
             TcpCommand::Sit => {
                 info!("{stamp} sit command");
@@ -36,8 +42,9 @@ pub async fn motion_task(
                 info!("{stamp} stand command");
                 gait.stand().await;
             }
-            _ => info!("{stamp} other command"),
+            _ => info!("{stamp} unknown command"),
         }
+        info!("Gait engine state:\n {gait:?}");
 
         ticker.next().await;
     }

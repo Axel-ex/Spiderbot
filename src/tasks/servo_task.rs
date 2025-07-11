@@ -1,12 +1,12 @@
 use crate::robot::{
     joint::Joint,
-    leg::Leg,
+    leg::*,
     servo::{AnyServo, Servo},
 };
 extern crate alloc;
 
 use crate::kinematics::{
-    conversion::{cartesian_to_polar, movement_is_done, polar_to_servo},
+    conversion::{cartesian_to_polar, polar_to_servo},
     gait_engine::MOVEMENT_COMPLETED,
 };
 use crate::robot::commands::ServoCommand;
@@ -21,7 +21,7 @@ use esp_hal::ledc::{timer, HighSpeed, LSGlobalClkSource, Ledc, LowSpeed};
 use esp_hal::peripherals::LEDC;
 use esp_hal::time::Rate;
 use fugit::HertzU32;
-use log::{error, info};
+use log::{debug, info};
 
 #[embassy_executor::task]
 pub async fn servo_task(
@@ -42,56 +42,63 @@ pub async fn servo_task(
         .await
         .expect("Fail creating the servos");
 
+    calibrate(&mut servos).await;
+
     loop {
         let cmd = receiver.receive().await;
-        info!("[SERVO_TASK] Received a command!");
-        update_position(cmd).await;
+        debug!("[SERVO_TASK] Received a command!");
+        update_position(cmd, &mut servos).await;
     }
 }
 
 /// Update position in a straight line at 50Hz
-pub async fn update_position(mut cmd: ServoCommand) {
+/// Add temp_speed to current_pos until it reach the expected position.
+pub async fn update_position(mut cmd: ServoCommand, servos: &mut [[AnyServo; 3]; 4]) {
     let mut ticker = Ticker::every(Duration::from_millis(20));
-    let (mut alpha, mut beta, mut gamma) = (0.0, 0.0, 0.0);
 
     loop {
         for leg in 0..4 {
             for joint in 0..3 {
-                if (cmd.current_pos[leg][joint] - cmd.expected_pos[leg][joint]).abs()
-                    >= cmd.temp_speed[leg][joint].abs()
-                {
+                let diff = (cmd.current_pos[leg][joint] - cmd.expected_pos[leg][joint]).abs();
+                let speed = cmd.temp_speed[leg][joint].abs();
+
+                if diff >= speed {
                     cmd.current_pos[leg][joint] += cmd.temp_speed[leg][joint];
                 } else {
                     cmd.current_pos[leg][joint] = cmd.expected_pos[leg][joint];
                 }
             }
-            cartesian_to_polar(
-                &mut alpha,
-                &mut beta,
-                &mut gamma,
+            let (alpha, beta, gamma) = cartesian_to_polar(
                 cmd.current_pos[leg][0],
                 cmd.current_pos[leg][1],
                 cmd.current_pos[leg][2],
             );
-            //TODO: write angles to the servos
-            //log progression of movement
+            polar_to_servo(servos, leg.into(), alpha, beta, gamma);
         }
         if movement_is_done(&cmd) {
             break;
         }
         ticker.next().await;
-        info!("[SERVO_TASK] moving servos...");
+        debug!("[SERVO_TASK] moving servos...");
     }
     MOVEMENT_COMPLETED.signal(());
     info!("[SERVO_TASK] movement completed");
 }
 
-pub async fn calibrate(servos: &mut [[AnyServo; 3]; 4]) {
-    for leg in 0..4 {
-        for joint in 0..3 {
-            servos[leg][joint].set_angle(90);
+pub fn movement_is_done(cmd: &ServoCommand) -> bool {
+    for i in 0..4 {
+        if !leg_movement_is_done(cmd, i) {
+            return false;
         }
     }
+    true
+}
+
+/// Check if the servos of a leg have reach their position
+fn leg_movement_is_done(cmd: &ServoCommand, leg_id: usize) -> bool {
+    cmd.current_pos[leg_id][0] == cmd.expected_pos[leg_id][0]
+        && cmd.current_pos[leg_id][1] == cmd.expected_pos[leg_id][1]
+        && cmd.current_pos[leg_id][2] == cmd.expected_pos[leg_id][2]
 }
 
 // 10bit register (max duty = 1024)
@@ -159,6 +166,7 @@ pub async fn creates_servos(
     ];
 
     // Fill the array
+    // TODO: Replace by Leg and Joint structure
     for (i, pin) in pins.into_iter().enumerate() {
         let (leg, joint) = match i {
             0 => (0, 0),
@@ -224,4 +232,12 @@ pub async fn creates_servos(
 
     // Convert Option<AnyServo> to AnyServo
     Ok(servo_array.map(|leg| leg.map(|s| s.expect("All servo positions should be filled"))))
+}
+
+pub async fn calibrate(servos: &mut [[AnyServo; 3]; 4]) {
+    for leg in 0..4 {
+        for joint in 0..3 {
+            servos[leg][joint].set_angle(90);
+        }
+    }
 }

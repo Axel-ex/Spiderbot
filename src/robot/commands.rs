@@ -1,4 +1,5 @@
 pub enum TcpCommand {
+    Calibrate,
     Sit,
     Stand,
     Wave(u8),
@@ -19,10 +20,11 @@ impl TryFrom<&str> for TcpCommand {
         let mut tokens = value.trim().split_whitespace();
 
         match tokens.next() {
-            Some("w") => Ok(TcpCommand::Wave(1)),
-            Some("d") => Ok(TcpCommand::StepForward(1)),
+            Some("w") => Ok(TcpCommand::Wave(5)),
+            Some("d") => Ok(TcpCommand::StepForward(5)),
             Some("r") => Ok(TcpCommand::Sit),
             Some("s") => Ok(TcpCommand::Stand),
+            Some("c") => Ok(TcpCommand::Calibrate),
             _ => Err(ParseCommandError),
         }
     }

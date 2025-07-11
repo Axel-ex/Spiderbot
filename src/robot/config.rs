@@ -56,8 +56,8 @@ impl RobotConfig {
         let turn_x0 = turn_x1 - temp_b * temp_a.cos();
         let turn_y0 = temp_b * temp_alpha.sin() - turn_y1 - LENGTH_SIDE;
 
-        let move_speed = 0.0;
-        let speed_multiple = 1.0;
+        let move_speed = 1.0;
+        let speed_multiple = 0.5;
         let spot_turn_speed = 4.0;
         let leg_move_speed = 8.0;
         let body_move_speed = 3.0;
