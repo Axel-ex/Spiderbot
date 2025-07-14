@@ -63,6 +63,7 @@ pub async fn update_position(mut cmd: ServoCommand, servos: &mut [[AnyServo; 3];
     loop {
         for leg in 0..4 {
             for joint in 0..3 {
+                ticker.next().await;
                 let diff = (cmd.current_pos[leg][joint] - cmd.expected_pos[leg][joint]).abs();
                 let speed = cmd.temp_speed[leg][joint].abs();
 
