@@ -24,15 +24,15 @@ impl core::fmt::Debug for AnyServo {
         match self {
             AnyServo::Low(servo) => f
                 .debug_struct("LowSpeedServo")
-                .field("angle", &servo.angle)
                 .field("leg", &servo.leg_id)
                 .field("joint", &servo.joint_id)
+                .field("angle", &servo.angle)
                 .finish(),
             AnyServo::High(servo) => f
                 .debug_struct("HighSpeedServo")
-                .field("angle", &servo.angle)
                 .field("leg", &servo.leg_id)
                 .field("joint", &servo.joint_id)
+                .field("angle", &servo.angle)
                 .finish(),
         }
     }
@@ -71,7 +71,7 @@ where
         self.angle = angle;
 
         // Convert angle (0–180) to pulse width (500–2500 us)
-        let min_pulse = 500; // microseconds (0°)
+        let min_pulse = 544; // microseconds (0°)
         let max_pulse = 2400; //microseconds (180°)
 
         // Linearly interpolate the pulse

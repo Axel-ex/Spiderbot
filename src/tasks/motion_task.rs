@@ -42,9 +42,17 @@ pub async fn motion_task(
                 info!("{stamp} stand command");
                 gait.stand().await;
             }
+            TcpCommand::TurnLeft(n) => {
+                info!("{stamp} turn left {n}");
+                gait.turn_left(n).await;
+            }
+            TcpCommand::TurnRight(n) => {
+                info!("{stamp} turn right {n}");
+                gait.turn_right(n).await;
+            }
             _ => info!("{stamp} unknown command"),
         }
-        info!("Gait engine state:\n {gait:?}");
+        debug!("Gait engine state:\n {gait:?}");
 
         ticker.next().await;
     }

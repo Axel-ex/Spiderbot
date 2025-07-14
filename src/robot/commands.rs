@@ -20,11 +20,13 @@ impl TryFrom<&str> for TcpCommand {
         let mut tokens = value.trim().split_whitespace();
 
         match tokens.next() {
-            Some("w") => Ok(TcpCommand::Wave(5)),
-            Some("d") => Ok(TcpCommand::StepForward(5)),
+            Some("w") => Ok(TcpCommand::Wave(1)),
+            Some("d") => Ok(TcpCommand::StepForward(1)),
             Some("r") => Ok(TcpCommand::Sit),
             Some("s") => Ok(TcpCommand::Stand),
             Some("c") => Ok(TcpCommand::Calibrate),
+            Some("tl") => Ok(TcpCommand::TurnLeft(1)),
+            Some("tr") => Ok(TcpCommand::TurnRight(1)),
             _ => Err(ParseCommandError),
         }
     }

@@ -128,6 +128,7 @@ impl GaitEngine {
         for _ in 0..times {
             if self.current_pos[Leg::FrontRight][1] == Y_START {
                 self.set_site(Leg::FrontRight, X_DEFAULT + X_OFFSET, Y_START, Z_UP, speed);
+                info!("{:?}", self);
                 self.send_cmd().await;
                 self.set_site(
                     Leg::FrontRight,
@@ -136,6 +137,7 @@ impl GaitEngine {
                     Z_UP,
                     speed,
                 );
+                info!("{:?}", self);
                 self.send_cmd().await;
                 self.set_site(
                     Leg::FrontRight,
@@ -144,6 +146,7 @@ impl GaitEngine {
                     Z_DEFAULT,
                     speed,
                 );
+                info!("{:?}", self);
                 self.send_cmd().await;
 
                 speed = self.config.body_move_speed;
@@ -175,6 +178,7 @@ impl GaitEngine {
                     Z_DEFAULT,
                     speed,
                 );
+                info!("{:?}", self);
                 self.send_cmd().await;
 
                 speed = self.config.leg_move_speed;
@@ -185,9 +189,220 @@ impl GaitEngine {
                     Z_UP,
                     speed,
                 );
+                info!("{:?}", self);
                 self.send_cmd().await;
                 self.set_site(Leg::BottomLeft, X_DEFAULT + X_OFFSET, Y_START, Z_UP, speed);
+                info!("{:?}", self);
                 self.send_cmd().await;
+                self.set_site(
+                    Leg::BottomLeft,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START,
+                    Z_DEFAULT,
+                    speed,
+                );
+                info!("{:?}", self);
+                self.send_cmd().await;
+            } else {
+                self.set_site(Leg::FrontLeft, X_DEFAULT + X_OFFSET, Y_START, Z_UP, speed);
+                info!("{:?}", self);
+                self.send_cmd().await;
+                self.set_site(
+                    Leg::FrontLeft,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START + 2.0 * Y_STEP,
+                    Z_UP,
+                    speed,
+                );
+                info!("{:?}", self);
+                self.send_cmd().await;
+                self.set_site(
+                    Leg::FrontLeft,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START + 2.0 * Y_STEP,
+                    Z_DEFAULT,
+                    speed,
+                );
+                info!("{:?}", self);
+                self.send_cmd().await;
+
+                speed = self.config.body_move_speed;
+                self.set_site(
+                    Leg::FrontLeft,
+                    X_DEFAULT - X_OFFSET,
+                    Y_START + Y_STEP,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::BottomLeft,
+                    X_DEFAULT - X_OFFSET,
+                    Y_START + Y_STEP,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::FrontRight,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::BottomRight,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START + 2.0 * Y_STEP,
+                    Z_DEFAULT,
+                    speed,
+                );
+                info!("{:?}", self);
+                self.send_cmd().await;
+
+                speed = self.config.leg_move_speed;
+                self.set_site(
+                    Leg::BottomRight,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START + 2.0 * Y_STEP,
+                    Z_UP,
+                    speed,
+                );
+                info!("{:?}", self);
+                self.send_cmd().await;
+                info!("Moved bottomRight");
+                self.set_site(Leg::BottomRight, X_DEFAULT + X_OFFSET, Y_START, Z_UP, speed);
+                info!("{:?}", self);
+                self.send_cmd().await;
+                self.set_site(
+                    Leg::BottomRight,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START,
+                    Z_DEFAULT,
+                    speed,
+                );
+                info!("{:?}", self);
+                self.send_cmd().await;
+                info!("Moved bottomRight");
+            }
+        }
+    }
+
+    pub async fn step_backward(&mut self, times: u8) {
+        for _ in 0..times {
+            todo!()
+        }
+    }
+
+    pub async fn turn_left(&mut self, times: i32) {
+        let speed = self.config.spot_turn_speed;
+
+        for _ in 0..times {
+            if self.current_pos[Leg::BottomRight][1] == Y_START {
+                // Leg 3 & 1 move
+                self.set_site(Leg::BottomRight, X_DEFAULT + X_OFFSET, Y_START, Z_UP, speed);
+                self.send_cmd().await;
+
+                self.set_site(
+                    Leg::FrontLeft,
+                    self.config.turn_x1 - X_OFFSET,
+                    self.config.turn_y1,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::BottomLeft,
+                    self.config.turn_x0 - X_OFFSET,
+                    self.config.turn_y0,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::FrontRight,
+                    self.config.turn_x1 + X_OFFSET,
+                    self.config.turn_y1,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::BottomRight,
+                    self.config.turn_x0 + X_OFFSET,
+                    self.config.turn_y0,
+                    Z_UP,
+                    speed,
+                );
+                self.send_cmd().await;
+
+                self.set_site(
+                    Leg::BottomRight,
+                    self.config.turn_x0 + X_OFFSET,
+                    self.config.turn_y0,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.send_cmd().await;
+
+                self.set_site(
+                    Leg::FrontLeft,
+                    self.config.turn_x1 + X_OFFSET,
+                    self.config.turn_y1,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::BottomLeft,
+                    self.config.turn_x0 + X_OFFSET,
+                    self.config.turn_y0,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::FrontRight,
+                    self.config.turn_x1 - X_OFFSET,
+                    self.config.turn_y1,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::BottomRight,
+                    self.config.turn_x0 - X_OFFSET,
+                    self.config.turn_y0,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.send_cmd().await;
+
+                self.set_site(
+                    Leg::BottomLeft,
+                    self.config.turn_x0 + X_OFFSET,
+                    self.config.turn_y0,
+                    Z_UP,
+                    speed,
+                );
+                self.send_cmd().await;
+
+                self.set_site(
+                    Leg::FrontLeft,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(Leg::BottomLeft, X_DEFAULT + X_OFFSET, Y_START, Z_UP, speed);
+                self.set_site(
+                    Leg::FrontRight,
+                    X_DEFAULT - X_OFFSET,
+                    Y_START + Y_STEP,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::BottomRight,
+                    X_DEFAULT - X_OFFSET,
+                    Y_START + Y_STEP,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.send_cmd().await;
+
                 self.set_site(
                     Leg::BottomLeft,
                     X_DEFAULT + X_OFFSET,
@@ -197,26 +412,326 @@ impl GaitEngine {
                 );
                 self.send_cmd().await;
             } else {
+                // Leg 0 & 2 move
                 self.set_site(Leg::FrontLeft, X_DEFAULT + X_OFFSET, Y_START, Z_UP, speed);
                 self.send_cmd().await;
+
                 self.set_site(
                     Leg::FrontLeft,
-                    X_DEFAULT + X_OFFSET,
-                    Y_START + 2.0 * Y_STEP,
+                    self.config.turn_x0 + X_OFFSET,
+                    self.config.turn_y0,
                     Z_UP,
                     speed,
                 );
-                self.send_cmd().await;
                 self.set_site(
-                    Leg::FrontLeft,
-                    X_DEFAULT + X_OFFSET,
-                    Y_START + 2.0 * Y_STEP,
+                    Leg::BottomLeft,
+                    self.config.turn_x1 + X_OFFSET,
+                    self.config.turn_y1,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::FrontRight,
+                    self.config.turn_x0 - X_OFFSET,
+                    self.config.turn_y0,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::BottomRight,
+                    self.config.turn_x1 - X_OFFSET,
+                    self.config.turn_y1,
                     Z_DEFAULT,
                     speed,
                 );
                 self.send_cmd().await;
 
-                speed = self.config.body_move_speed;
+                self.set_site(
+                    Leg::FrontLeft,
+                    self.config.turn_x0 + X_OFFSET,
+                    self.config.turn_y0,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.send_cmd().await;
+
+                self.set_site(
+                    Leg::FrontLeft,
+                    self.config.turn_x0 - X_OFFSET,
+                    self.config.turn_y0,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::BottomLeft,
+                    self.config.turn_x1 - X_OFFSET,
+                    self.config.turn_y1,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::FrontRight,
+                    self.config.turn_x0 + X_OFFSET,
+                    self.config.turn_y0,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::BottomRight,
+                    self.config.turn_x1 + X_OFFSET,
+                    self.config.turn_y1,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.send_cmd().await;
+
+                self.set_site(
+                    Leg::FrontRight,
+                    self.config.turn_x0 + X_OFFSET,
+                    self.config.turn_y0,
+                    Z_UP,
+                    speed,
+                );
+                self.send_cmd().await;
+
+                self.set_site(
+                    Leg::FrontLeft,
+                    X_DEFAULT - X_OFFSET,
+                    Y_START + Y_STEP,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::BottomLeft,
+                    X_DEFAULT - X_OFFSET,
+                    Y_START + Y_STEP,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(Leg::FrontRight, X_DEFAULT + X_OFFSET, Y_START, Z_UP, speed);
+                self.set_site(
+                    Leg::BottomRight,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.send_cmd().await;
+
+                self.set_site(
+                    Leg::FrontRight,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.send_cmd().await;
+            }
+        }
+    }
+
+    pub async fn turn_right(&mut self, times: i32) {
+        let speed = self.config.spot_turn_speed;
+
+        for _ in 0..times {
+            if self.current_pos[Leg::FrontRight as usize][1] == Y_START {
+                // Leg 2 (FrontRight) & 0 (FrontLeft) move
+                self.set_site(Leg::FrontRight, X_DEFAULT + X_OFFSET, Y_START, Z_UP, speed);
+                self.send_cmd().await;
+
+                self.set_site(
+                    Leg::FrontLeft,
+                    self.config.turn_x0 - X_OFFSET,
+                    self.config.turn_y0,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::BottomLeft,
+                    self.config.turn_x1 - X_OFFSET,
+                    self.config.turn_y1,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::FrontRight,
+                    self.config.turn_x0 + X_OFFSET,
+                    self.config.turn_y0,
+                    Z_UP,
+                    speed,
+                );
+                self.set_site(
+                    Leg::BottomRight,
+                    self.config.turn_x1 + X_OFFSET,
+                    self.config.turn_y1,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.send_cmd().await;
+
+                self.set_site(
+                    Leg::FrontRight,
+                    self.config.turn_x0 + X_OFFSET,
+                    self.config.turn_y0,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.send_cmd().await;
+
+                self.set_site(
+                    Leg::FrontLeft,
+                    self.config.turn_x0 + X_OFFSET,
+                    self.config.turn_y0,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::BottomLeft,
+                    self.config.turn_x1 + X_OFFSET,
+                    self.config.turn_y1,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::FrontRight,
+                    self.config.turn_x0 - X_OFFSET,
+                    self.config.turn_y0,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::BottomRight,
+                    self.config.turn_x1 - X_OFFSET,
+                    self.config.turn_y1,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.send_cmd().await;
+
+                self.set_site(
+                    Leg::FrontLeft,
+                    self.config.turn_x0 + X_OFFSET,
+                    self.config.turn_y0,
+                    Z_UP,
+                    speed,
+                );
+                self.send_cmd().await;
+
+                self.set_site(Leg::FrontLeft, X_DEFAULT + X_OFFSET, Y_START, Z_UP, speed);
+                self.set_site(
+                    Leg::BottomLeft,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::FrontRight,
+                    X_DEFAULT - X_OFFSET,
+                    Y_START + Y_STEP,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::BottomRight,
+                    X_DEFAULT - X_OFFSET,
+                    Y_START + Y_STEP,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.send_cmd().await;
+
+                self.set_site(
+                    Leg::FrontLeft,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.send_cmd().await;
+            } else {
+                // Leg 1 (BottomLeft) & 3 (BottomRight) move
+                self.set_site(Leg::BottomLeft, X_DEFAULT + X_OFFSET, Y_START, Z_UP, speed);
+                self.send_cmd().await;
+
+                self.set_site(
+                    Leg::FrontLeft,
+                    self.config.turn_x1 + X_OFFSET,
+                    self.config.turn_y1,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::BottomLeft,
+                    self.config.turn_x0 + X_OFFSET,
+                    self.config.turn_y0,
+                    Z_UP,
+                    speed,
+                );
+                self.set_site(
+                    Leg::FrontRight,
+                    self.config.turn_x1 - X_OFFSET,
+                    self.config.turn_y1,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::BottomRight,
+                    self.config.turn_x0 - X_OFFSET,
+                    self.config.turn_y0,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.send_cmd().await;
+
+                self.set_site(
+                    Leg::BottomLeft,
+                    self.config.turn_x0 + X_OFFSET,
+                    self.config.turn_y0,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.send_cmd().await;
+
+                self.set_site(
+                    Leg::FrontLeft,
+                    self.config.turn_x1 - X_OFFSET,
+                    self.config.turn_y1,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::BottomLeft,
+                    self.config.turn_x0 - X_OFFSET,
+                    self.config.turn_y0,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::FrontRight,
+                    self.config.turn_x1 + X_OFFSET,
+                    self.config.turn_y1,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.set_site(
+                    Leg::BottomRight,
+                    self.config.turn_x0 + X_OFFSET,
+                    self.config.turn_y0,
+                    Z_DEFAULT,
+                    speed,
+                );
+                self.send_cmd().await;
+
+                self.set_site(
+                    Leg::BottomRight,
+                    self.config.turn_x0 + X_OFFSET,
+                    self.config.turn_y0,
+                    Z_UP,
+                    speed,
+                );
+                self.send_cmd().await;
+
                 self.set_site(
                     Leg::FrontLeft,
                     X_DEFAULT - X_OFFSET,
@@ -238,26 +753,9 @@ impl GaitEngine {
                     Z_DEFAULT,
                     speed,
                 );
-                self.set_site(
-                    Leg::BottomRight,
-                    X_DEFAULT + X_OFFSET,
-                    Y_START + 2.0 * Y_STEP,
-                    Z_DEFAULT,
-                    speed,
-                );
-                self.send_cmd().await;
-
-                speed = self.config.leg_move_speed;
-                self.set_site(
-                    Leg::BottomRight,
-                    X_DEFAULT + X_OFFSET,
-                    Y_START + 2.0 * Y_STEP,
-                    Z_UP,
-                    speed,
-                );
-                self.send_cmd().await;
                 self.set_site(Leg::BottomRight, X_DEFAULT + X_OFFSET, Y_START, Z_UP, speed);
                 self.send_cmd().await;
+
                 self.set_site(
                     Leg::BottomRight,
                     X_DEFAULT + X_OFFSET,

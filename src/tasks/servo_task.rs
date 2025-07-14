@@ -1,7 +1,7 @@
 use crate::robot::{
     joint::Joint,
     leg::*,
-    servo::{AnyServo, Servo},
+    servo::{self, AnyServo, Servo},
 };
 extern crate alloc;
 
@@ -42,12 +42,16 @@ pub async fn servo_task(
         .await
         .expect("Fail creating the servos");
 
-    calibrate(&mut servos).await;
+    // calibrate(&mut servos).await;
 
     loop {
         let cmd = receiver.receive().await;
         debug!("[SERVO_TASK] Received a command!");
         update_position(cmd, &mut servos).await;
+        // info!("Servos current state: ");
+        // for servo in servos.iter() {
+        //     info!("{:?}", servo);
+        // }
     }
 }
 
@@ -82,7 +86,7 @@ pub async fn update_position(mut cmd: ServoCommand, servos: &mut [[AnyServo; 3];
         debug!("[SERVO_TASK] moving servos...");
     }
     MOVEMENT_COMPLETED.signal(());
-    info!("[SERVO_TASK] movement completed");
+    // info!("[SERVO_TASK] movement completed");
 }
 
 pub fn movement_is_done(cmd: &ServoCommand) -> bool {
