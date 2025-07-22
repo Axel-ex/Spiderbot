@@ -1,17 +1,13 @@
 use crate::robot::{
     joint::Joint,
     leg::*,
-    servo::{self, AnyServo, Servo},
+    servo::{AnyServo, Servo},
 };
 extern crate alloc;
 
-use crate::kinematics::{
-    conversion::{cartesian_to_polar, polar_to_servo},
-    gait_engine::MOVEMENT_COMPLETED,
-};
-use crate::robot::commands::ServoCommand;
+use crate::kinematics::conversion::{cartesian_to_polar, polar_to_servo};
+use crate::robot::state::ROBOT_STATE;
 use alloc::boxed::Box;
-use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Receiver};
 use embassy_time::{Duration, Ticker, Timer};
 use embedded_hal::pwm::SetDutyCycle;
 use esp_hal::gpio::AnyPin;
@@ -21,14 +17,10 @@ use esp_hal::ledc::{timer, HighSpeed, LSGlobalClkSource, Ledc, LowSpeed};
 use esp_hal::peripherals::LEDC;
 use esp_hal::time::Rate;
 use fugit::HertzU32;
-use log::{debug, info};
+use log::info;
 
 #[embassy_executor::task]
-pub async fn servo_task(
-    servo_pins: [AnyPin<'static>; 12],
-    ledc: LEDC<'static>,
-    receiver: Receiver<'static, CriticalSectionRawMutex, ServoCommand, 3>,
-) {
+pub async fn servo_task(servo_pins: [AnyPin<'static>; 12], ledc: LEDC<'static>) {
     info!("Starting servo task");
     let mut ledc = Ledc::new(ledc);
     ledc.set_global_slow_clock(LSGlobalClkSource::APBClk);
@@ -42,12 +34,11 @@ pub async fn servo_task(
         .await
         .expect("Fail creating the servos");
 
-    // calibrate(&mut servos).await;
+    let mut ticker = Ticker::every(Duration::from_millis(20)); //50Hz
 
     loop {
-        let cmd = receiver.receive().await;
-        debug!("[SERVO_TASK] Received a command!");
-        update_position(cmd, &mut servos).await;
+        update_position(&mut servos).await;
+        ticker.next().await;
         // info!("Servos current state: ");
         // for servo in servos.iter() {
         //     info!("{:?}", servo);
@@ -57,53 +48,29 @@ pub async fn servo_task(
 
 /// Update position in a straight line at 50Hz
 /// Add temp_speed to current_pos until it reach the expected position.
-pub async fn update_position(mut cmd: ServoCommand, servos: &mut [[AnyServo; 3]; 4]) {
-    let mut ticker = Ticker::every(Duration::from_millis(20));
+pub async fn update_position(servos: &mut [[AnyServo; 3]; 4]) {
+    ROBOT_STATE.lock(|state| {
+        let mut state = state.borrow_mut();
 
-    loop {
         for leg in 0..4 {
             for joint in 0..3 {
-                ticker.next().await;
-                let diff = (cmd.current_pos[leg][joint] - cmd.expected_pos[leg][joint]).abs();
-                let speed = cmd.temp_speed[leg][joint].abs();
+                let diff = (state.current_pos[leg][joint] - state.expected_pos[leg][joint]).abs();
+                let speed = state.temp_speed[leg][joint].abs();
 
                 if diff >= speed {
-                    cmd.current_pos[leg][joint] += cmd.temp_speed[leg][joint];
+                    state.current_pos[leg][joint] += state.temp_speed[leg][joint];
                 } else {
-                    cmd.current_pos[leg][joint] = cmd.expected_pos[leg][joint];
+                    state.current_pos[leg][joint] = state.expected_pos[leg][joint];
                 }
             }
             let (alpha, beta, gamma) = cartesian_to_polar(
-                cmd.current_pos[leg][0],
-                cmd.current_pos[leg][1],
-                cmd.current_pos[leg][2],
+                state.current_pos[leg][0],
+                state.current_pos[leg][1],
+                state.current_pos[leg][2],
             );
             polar_to_servo(servos, leg.into(), alpha, beta, gamma);
         }
-        if movement_is_done(&cmd) {
-            break;
-        }
-        ticker.next().await;
-        debug!("[SERVO_TASK] moving servos...");
-    }
-    MOVEMENT_COMPLETED.signal(());
-    // info!("[SERVO_TASK] movement completed");
-}
-
-pub fn movement_is_done(cmd: &ServoCommand) -> bool {
-    for i in 0..4 {
-        if !leg_movement_is_done(cmd, i) {
-            return false;
-        }
-    }
-    true
-}
-
-/// Check if the servos of a leg have reach their position
-fn leg_movement_is_done(cmd: &ServoCommand, leg_id: usize) -> bool {
-    cmd.current_pos[leg_id][0] == cmd.expected_pos[leg_id][0]
-        && cmd.current_pos[leg_id][1] == cmd.expected_pos[leg_id][1]
-        && cmd.current_pos[leg_id][2] == cmd.expected_pos[leg_id][2]
+    });
 }
 
 // 10bit register (max duty = 1024)

@@ -39,7 +39,6 @@ esp_bootloader_esp_idf::esp_app_desc!();
 // }
 //
 static TCP_CMD_CHANNEL: Channel<CriticalSectionRawMutex, TcpCommand, 3> = Channel::new();
-static SERVO_CMD_CHANNEL: Channel<CriticalSectionRawMutex, ServoCommand, 3> = Channel::new();
 
 macro_rules! mk_static {
     ($t:ty, $val:expr) => {{
@@ -106,13 +105,10 @@ async fn main(spawner: Spawner) {
         .spawn(tcp_server(stack, TCP_CMD_CHANNEL.sender()))
         .expect("Fail spawning net task"); //Listen for tcp commands to forward to motion task
     spawner
-        .spawn(motion_task(
-            TCP_CMD_CHANNEL.receiver(),
-            SERVO_CMD_CHANNEL.sender(),
-        ))
+        .spawn(motion_task(TCP_CMD_CHANNEL.receiver()))
         .expect("Fail spawning the motion task");
     spawner
-        .spawn(servo_task(servo_pins, p.LEDC, SERVO_CMD_CHANNEL.receiver()))
+        .spawn(servo_task(servo_pins, p.LEDC))
         .expect("Fail spawning servo task");
 
     loop {

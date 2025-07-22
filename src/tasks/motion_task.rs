@@ -10,18 +10,21 @@ use log::{debug, info};
 #[embassy_executor::task]
 pub async fn motion_task(
     tcp_cmd_receiver: Receiver<'static, CriticalSectionRawMutex, TcpCommand, 3>,
-    servo_cmd_sender: Sender<'static, CriticalSectionRawMutex, ServoCommand, 3>,
 ) {
     let mut ticker = Ticker::every(Duration::from_millis(20));
-    let mut gait = GaitEngine::new(servo_cmd_sender);
+    let mut gait = GaitEngine::new();
     gait.init_positions().await;
-    debug!("Gait engine inited!\n {gait:?}");
+    debug!("Gait engine inited!");
     info!("{:?}", gait.config());
 
     loop {
         info!("[MOTION_TASK] listening for command...");
         let stamp = "[MOTION_TASK] received";
         match tcp_cmd_receiver.receive().await {
+            TcpCommand::Test => {
+                info!("{stamp} test");
+                gait.do_test().await;
+            }
             TcpCommand::Calibrate => {
                 info!("{stamp} calibrate");
                 gait.calibrate().await;
@@ -52,7 +55,6 @@ pub async fn motion_task(
             }
             _ => info!("{stamp} unknown command"),
         }
-        debug!("Gait engine state:\n {gait:?}");
 
         ticker.next().await;
     }
