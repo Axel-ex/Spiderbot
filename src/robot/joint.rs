@@ -5,9 +5,9 @@ use super::servo::AnyServo;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Joint {
-    Coxa = 0,
-    Femur = 1,
-    Tibia = 2,
+    Femur = 0,
+    Tibia = 1,
+    Coxa = 2,
 }
 
 impl Display for Joint {

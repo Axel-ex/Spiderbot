@@ -22,6 +22,10 @@ pub async fn motion_task(
         info!("[MOTION_TASK] listening for command...");
         let stamp = "[MOTION_TASK] received";
         match tcp_cmd_receiver.receive().await {
+            TcpCommand::Test => {
+                info!("{stamp} test");
+                gait.do_test().await;
+            }
             TcpCommand::Calibrate => {
                 info!("{stamp} calibrate");
                 gait.calibrate().await;

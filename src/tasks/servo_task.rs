@@ -1,7 +1,7 @@
 use crate::robot::{
     joint::Joint,
     leg::*,
-    servo::{self, AnyServo, Servo},
+    servo::{AnyServo, Servo},
 };
 extern crate alloc;
 
@@ -42,28 +42,20 @@ pub async fn servo_task(
         .await
         .expect("Fail creating the servos");
 
-    // calibrate(&mut servos).await;
-
     loop {
         let cmd = receiver.receive().await;
         debug!("[SERVO_TASK] Received a command!");
         update_position(cmd, &mut servos).await;
-        // info!("Servos current state: ");
-        // for servo in servos.iter() {
-        //     info!("{:?}", servo);
-        // }
     }
 }
 
-/// Update position in a straight line at 50Hz
-/// Add temp_speed to current_pos until it reach the expected position.
 pub async fn update_position(mut cmd: ServoCommand, servos: &mut [[AnyServo; 3]; 4]) {
     let mut ticker = Ticker::every(Duration::from_millis(20));
+    // let start = embassy_time::Instant::now();
 
     loop {
         for leg in 0..4 {
             for joint in 0..3 {
-                ticker.next().await;
                 let diff = (cmd.current_pos[leg][joint] - cmd.expected_pos[leg][joint]).abs();
                 let speed = cmd.temp_speed[leg][joint].abs();
 
@@ -84,10 +76,14 @@ pub async fn update_position(mut cmd: ServoCommand, servos: &mut [[AnyServo; 3];
             break;
         }
         ticker.next().await;
-        debug!("[SERVO_TASK] moving servos...");
+        // debug!(
+        //     "[{}][SERVO_TASK] moving servos...",
+        //     embassy_time::Instant::now()
+        //         .duration_since(start)
+        //         .as_millis() as u64
+        // );
     }
     MOVEMENT_COMPLETED.signal(());
-    // info!("[SERVO_TASK] movement completed");
 }
 
 pub fn movement_is_done(cmd: &ServoCommand) -> bool {
@@ -170,22 +166,20 @@ pub async fn creates_servos(
         Number::Channel3, // 11
     ];
 
-    // Fill the array
-    // TODO: Replace by Leg and Joint structure
     for (i, pin) in pins.into_iter().enumerate() {
         let (leg, joint) = match i {
             0 => (0, 0),
             1 => (0, 1),
-            2 => (0, 2), // Leg 0 (Front Right)
+            2 => (0, 2), // Leg 0 (Front Left)
             3 => (1, 0),
             4 => (1, 1),
-            5 => (1, 2), // Leg 1 (Front Left)
+            5 => (1, 2), // Leg 1 (bottom Left)
             6 => (2, 0),
             7 => (2, 1),
-            8 => (2, 2), // Leg 2 (Back Right)
+            8 => (2, 2), // Leg 2 (Front Right)
             9 => (3, 0),
             10 => (3, 1),
-            11 => (3, 2), // Leg 3 (Back Left)
+            11 => (3, 2), // Leg 3 (Bottom right)
             _ => unreachable!(),
         };
 

@@ -103,6 +103,23 @@ impl GaitEngine {
             Ok(_) => self.current_pos = self.expected_pos,
             Err(_) => error!("[MOTION_TASK] command timed out"),
         }
+
+        debug!("{:?}", self);
+    }
+
+    pub async fn do_test(&mut self) {
+        info!("Stand");
+        self.stand().await;
+        embassy_time::Timer::after_secs(2).await;
+        info!("Wave");
+        self.wave(2).await;
+        embassy_time::Timer::after_secs(2).await;
+        info!("Step forward");
+        self.step_forward(2).await;
+        embassy_time::Timer::after_secs(2).await;
+        info!("Sit");
+        self.sit().await;
+        embassy_time::Timer::after_secs(5).await;
     }
 
     pub async fn sit(&mut self) {
@@ -122,7 +139,6 @@ impl GaitEngine {
                 self.config.stand_seat_speed,
             );
         }
-        info!("{:?}", self);
         self.send_cmd().await;
     }
 
@@ -132,7 +148,6 @@ impl GaitEngine {
         for _ in 0..times {
             if self.current_pos[Leg::FrontRight][1] == Y_START {
                 self.set_site(Leg::FrontRight, X_DEFAULT + X_OFFSET, Y_START, Z_UP, speed);
-                info!("{:?}", self);
                 self.send_cmd().await;
                 self.set_site(
                     Leg::FrontRight,
@@ -141,7 +156,6 @@ impl GaitEngine {
                     Z_UP,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
                 self.set_site(
                     Leg::FrontRight,
@@ -150,7 +164,6 @@ impl GaitEngine {
                     Z_DEFAULT,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 speed = self.config.body_move_speed;
@@ -182,7 +195,6 @@ impl GaitEngine {
                     Z_DEFAULT,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 speed = self.config.leg_move_speed;
@@ -193,10 +205,8 @@ impl GaitEngine {
                     Z_UP,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
                 self.set_site(Leg::BottomLeft, X_DEFAULT + X_OFFSET, Y_START, Z_UP, speed);
-                info!("{:?}", self);
                 self.send_cmd().await;
                 self.set_site(
                     Leg::BottomLeft,
@@ -205,11 +215,9 @@ impl GaitEngine {
                     Z_DEFAULT,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
             } else {
                 self.set_site(Leg::FrontLeft, X_DEFAULT + X_OFFSET, Y_START, Z_UP, speed);
-                info!("{:?}", self);
                 self.send_cmd().await;
                 self.set_site(
                     Leg::FrontLeft,
@@ -218,7 +226,6 @@ impl GaitEngine {
                     Z_UP,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
                 self.set_site(
                     Leg::FrontLeft,
@@ -227,7 +234,6 @@ impl GaitEngine {
                     Z_DEFAULT,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 speed = self.config.body_move_speed;
@@ -259,7 +265,6 @@ impl GaitEngine {
                     Z_DEFAULT,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 speed = self.config.leg_move_speed;
@@ -270,11 +275,8 @@ impl GaitEngine {
                     Z_UP,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
-                info!("Moved bottomRight");
                 self.set_site(Leg::BottomRight, X_DEFAULT + X_OFFSET, Y_START, Z_UP, speed);
-                info!("{:?}", self);
                 self.send_cmd().await;
                 self.set_site(
                     Leg::BottomRight,
@@ -283,9 +285,7 @@ impl GaitEngine {
                     Z_DEFAULT,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
-                info!("Moved bottomRight");
             }
         }
     }

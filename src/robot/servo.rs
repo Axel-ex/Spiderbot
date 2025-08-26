@@ -83,7 +83,6 @@ where
         // THE WIDTH OF THE PULSE DRIVES THE ANGLE, NOT FREQ
         let period_us = 1_000_000 / self.frequency.raw();
         let duty = ((pulse * self.max_duty) / period_us).min(self.max_duty) as u16;
-        debug!("duty: {duty:?}");
         if let Err(e) = self.pwm.set_duty_cycle(duty) {
             error!(
                 "{} {} Error writing angle {:?}",
