@@ -9,7 +9,13 @@ pub enum Joint {
     Femur = 1,
     Tibia = 2,
 }
-
+//
+// #[derive(Debug, Clone, Copy)]
+// pub enum Joint {
+//     Femur = 0,
+//     Tibia = 1,
+//     Coxa = 2,
+// }
 impl Display for Joint {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
