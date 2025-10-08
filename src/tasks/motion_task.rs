@@ -1,3 +1,9 @@
+//! High-level motion task for Spiderbot.
+//!
+//! Receives movement commands, computes gait steps, and coordinates leg positions
+//! using the gait engine and kinematics modules.
+//!
+//! Communicates with the servo task to execute planned movements.
 use crate::kinematics::gait_engine::GaitEngine;
 use crate::robot::commands::{ServoCommand, TcpCommand};
 use embassy_sync::{

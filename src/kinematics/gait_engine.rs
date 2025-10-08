@@ -1,3 +1,9 @@
+//! Gait engine and leg trajectory generation.
+//!
+//! Implements the state machine and algorithms for coordinated leg movement,
+//! including tripod gait sequencing and trajectory interpolation.
+//!
+//! Used by the motion task to generate step patterns and synchronize legs.
 use crate::robot::{commands::ServoCommand, config::*, leg::Leg};
 use core::f32;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Sender, signal::Signal};

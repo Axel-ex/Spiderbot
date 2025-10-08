@@ -1,3 +1,9 @@
+//! Servo control task for Spiderbot.
+//!
+//! Receives joint angle commands and drives the servo controller hardware to
+//! move the robot's legs accordingly.
+//!
+//! Handles servo timing and error reporting.
 extern crate alloc;
 
 use crate::kinematics::{

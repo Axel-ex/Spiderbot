@@ -1,3 +1,9 @@
+//! Leg enumeration and indexing helpers.
+//!
+//! Provides the [`Leg`] enum for identifying each leg, as well as conversions
+//! between indices and enum variants.
+//!
+//! Used for addressing legs in arrays and command structures.
 use core::fmt::Display;
 use core::ops::{Index, IndexMut};
 

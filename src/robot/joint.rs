@@ -1,3 +1,7 @@
+//! Joint enumeration and display helpers.
+//!
+//! Defines the [`Joint`] enum for identifying each joint (coxa, femur, tibia),
+//! and provides display formatting for debugging and logging.
 use core::fmt::Display;
 
 #[derive(Debug, Clone, Copy)]

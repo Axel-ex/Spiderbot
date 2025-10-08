@@ -1,3 +1,9 @@
+//! Inverse kinematics and servo pulse conversion.
+//!
+//! Provides functions to convert between Cartesian coordinates and joint angles
+//! for each leg, as well as mapping joint angles to servo pulse widths.
+//!
+//! Used by the gait engine (held by the motion task) to plan and execute leg movements.
 use core::f32::consts::PI;
 use micromath::F32Ext;
 

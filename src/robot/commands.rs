@@ -1,3 +1,9 @@
+//! Command types for robot control and inter-task communication.
+//!
+//! Defines enums and structs for high-level robot commands (e.g., walking, turning)
+//! and low-level servo commands, as well as TCP command parsing.
+//!
+//! Used by the network, motion, and servo tasks.
 pub enum TcpCommand {
     Calibrate,
     Test,

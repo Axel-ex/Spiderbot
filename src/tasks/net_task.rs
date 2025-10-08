@@ -1,3 +1,9 @@
+//! Networking and TCP command server task.
+//!
+//! Manages WiFi connection, listens for TCP commands, parses them, and forwards
+//! them to the motion task for execution.
+//!
+//! Handles network errors and reconnection logic.
 extern crate alloc;
 
 use crate::robot::commands::TcpCommand;
