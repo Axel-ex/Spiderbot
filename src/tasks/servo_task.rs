@@ -51,7 +51,6 @@ pub async fn servo_task(
 
 pub async fn update_position(mut cmd: ServoCommand, servos: &mut [[AnyServo; 3]; 4]) {
     let mut ticker = Ticker::every(Duration::from_millis(20));
-    // let start = embassy_time::Instant::now();
 
     loop {
         for leg in 0..4 {
@@ -76,12 +75,6 @@ pub async fn update_position(mut cmd: ServoCommand, servos: &mut [[AnyServo; 3];
             break;
         }
         ticker.next().await;
-        // debug!(
-        //     "[{}][SERVO_TASK] moving servos...",
-        //     embassy_time::Instant::now()
-        //         .duration_since(start)
-        //         .as_millis() as u64
-        // );
     }
     MOVEMENT_COMPLETED.signal(());
 }

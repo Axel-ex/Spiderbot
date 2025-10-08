@@ -7,7 +7,7 @@ use embassy_net::{tcp::TcpSocket, IpListenEndpoint, Stack};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Sender};
 use embassy_time::{Duration, Timer};
 use esp_wifi::wifi::{ClientConfiguration, WifiController, WifiDevice};
-use log::{error, info};
+use log::{debug, error, info, warn};
 
 /// Keeps the net stack up. (processes network events)
 #[embassy_executor::task]
@@ -20,13 +20,13 @@ pub async fn tcp_server(
     stack: Stack<'static>,
     cmd_sender: Sender<'static, CriticalSectionRawMutex, TcpCommand, 3>,
 ) {
-    let mut rx_buf = [0u8; 512];
-    let mut tx_buf = [0u8; 512];
+    let mut rx_buf = [0u8; 128];
+    let mut tx_buf = [0u8; 128];
 
     loop {
         // Create NEW socket for each connection
         let mut socket = TcpSocket::new(stack, &mut rx_buf, &mut tx_buf);
-        socket.set_timeout(Some(Duration::from_secs(2)));
+        // socket.set_timeout(Some(Duration::from_secs(2)));
 
         info!("Waiting for connection...");
         match socket
@@ -37,11 +37,11 @@ pub async fn tcp_server(
             .await
         {
             Ok(_) => {
-                info!("Client connected!");
+                debug!("Client connected!");
                 handle_connection(&mut socket, &cmd_sender).await;
             }
             Err(e) => {
-                error!("Accept failed: {:?}", e);
+                debug!("Accept failed: {:?}", e);
                 Timer::after_millis(500).await; // Backoff delay
                 continue;
             }
@@ -53,15 +53,18 @@ pub async fn handle_connection(
     socket: &mut TcpSocket<'_>,
     cmd_sender: &Sender<'static, CriticalSectionRawMutex, TcpCommand, 3>,
 ) {
-    let mut buf = [0u8; 256];
+    let mut buf = [0u8; 128];
     loop {
         match socket.read(&mut buf).await {
             Ok(0) => break,
             Ok(n) => {
-                if let Ok(cmd) = TcpCommand::try_from(core::str::from_utf8(&buf[..n]).unwrap()) {
+                let received_str = core::str::from_utf8(&buf[..n]).unwrap();
+                if let Ok(cmd) = TcpCommand::try_from(received_str) {
                     cmd_sender.send(cmd).await;
-                };
-                break; // Close after first command
+                } else {
+                    warn!("Unrecognised command: {}", received_str);
+                }
+                break; // Close socket after first command
             }
             Err(e) => {
                 error!("Read error: {:?}", e);

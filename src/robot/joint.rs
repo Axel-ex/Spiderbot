@@ -5,9 +5,9 @@ use super::servo::AnyServo;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Joint {
-    Femur = 0,
+    Coxa = 0,
     Tibia = 1,
-    Coxa = 2,
+    Femur = 2,
 }
 
 impl Display for Joint {
@@ -23,9 +23,9 @@ impl Display for Joint {
 impl From<usize> for Joint {
     fn from(value: usize) -> Self {
         match value {
-            0 => Joint::Femur,
+            0 => Joint::Coxa,
             1 => Joint::Tibia,
-            2 => Joint::Coxa,
+            2 => Joint::Femur,
             _ => Joint::Coxa, // default that should not occur
         }
     }
