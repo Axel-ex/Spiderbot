@@ -1,3 +1,9 @@
+//! Main entry point for Spiderbot firmware.
+//!
+//! Initializes hardware, networking, and spawns async tasks for motion, networking, and servo control.
+//! Uses Embassy for async execution and ESP HAL for hardware access.
+//!
+//! The main loop keeps the firmware alive after spawning all tasks.
 #![no_std]
 #![no_main]
 #![deny(
@@ -24,12 +30,6 @@ use spider_robot::tasks::net_task::{configurate_and_start_wifi, runner_task, tcp
 use spider_robot::tasks::servo_task::servo_task;
 
 esp_bootloader_esp_idf::esp_app_desc!();
-
-//LEGS: [femur, tibia, coxa]
-//FRONT_L: [32, 33, 25]
-//BOTTOM_L: [26, 27, 14]
-//FRONT_R: [12, 13, 19]
-//BOTTOM_R: [18, 5, 17]
 
 static TCP_CMD_CHANNEL: Channel<CriticalSectionRawMutex, TcpCommand, 3> = Channel::new();
 static SERVO_CMD_CHANNEL: Channel<CriticalSectionRawMutex, ServoCommand, 3> = Channel::new();
@@ -76,15 +76,15 @@ async fn main(spawner: Spawner) {
         seed,
     );
 
-    //I2c
-    // let i2c_dev = I2c::new(p.I2C0, Config::default())
-    //     .unwrap()
-    //     .with_sda(p.GPIO21)
-    //     .with_scl(p.GPIO22)
-    //     .into_async();
-    //
-    // //Pca9685
-    // let pwm = Pca9685::new(i2c_dev, pwm_pca9685::Address::default()).unwrap();
+    // I2c
+    let i2c_dev = I2c::new(p.I2C0, Config::default())
+        .unwrap()
+        .with_sda(p.GPIO21)
+        .with_scl(p.GPIO22)
+        .into_async();
+
+    //Pca9685
+    let pwm = Pca9685::new(i2c_dev, pwm_pca9685::Address::default()).unwrap();
 
     spawner
         .spawn(runner_task(runner))
@@ -98,10 +98,10 @@ async fn main(spawner: Spawner) {
             SERVO_CMD_CHANNEL.sender(),
         ))
         .expect("Fail spawning the motion task");
-    // spawner
-    //     .spawn(servo_task(pwm, SERVO_CMD_CHANNEL.receiver()))
-    //     .expect("Fail spawning servo task");
-    //
+    spawner
+        .spawn(servo_task(pwm, SERVO_CMD_CHANNEL.receiver()))
+        .expect("Fail spawning servo task");
+
     loop {
         pending::<()>().await;
     }
