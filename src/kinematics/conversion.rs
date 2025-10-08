@@ -6,11 +6,12 @@ use crate::robot::{
     leg::Leg,
 };
 use esp_hal::{i2c::master::I2c, Async};
+use log::error;
 use pwm_pca9685::{Channel, Pca9685};
 
 // --- Servo Configuration ---
-const SERVO_MIN_PULSE_US: f32 = 500.0;
-const SERVO_MAX_PULSE_US: f32 = 2500.0;
+const SERVO_MIN_PULSE_US: f32 = 544.0;
+const SERVO_MAX_PULSE_US: f32 = 2400.0;
 const SERVO_ANGLE_RANGE: f32 = 180.0;
 const PCA_FREQUENCY_HZ: u32 = 50;
 const PCA_PERIOD_US: f32 = 1_000_000.0 / PCA_FREQUENCY_HZ as f32; // 20000 µs
@@ -43,15 +44,15 @@ async fn set_leg_angles(
     let femur_tick = angle_to_ticks(gamma);
 
     let channels = SERVO_CHANNEL_MAP[leg as usize];
-    pwm.set_channel_on_off(channels[0], 0, coxa_tick)
-        .await
-        .unwrap();
-    pwm.set_channel_on_off(channels[1], 0, tibia_tick)
-        .await
-        .unwrap();
-    pwm.set_channel_on_off(channels[2], 0, femur_tick)
-        .await
-        .unwrap();
+    if let Err(e) = pwm.set_channel_on_off(channels[0], 0, coxa_tick).await {
+        error!("{e}");
+    }
+    if let Err(e) = pwm.set_channel_on_off(channels[1], 0, tibia_tick).await {
+        error!("{e}");
+    }
+    if let Err(e) = pwm.set_channel_on_off(channels[2], 0, femur_tick).await {
+        error!("{e}");
+    }
 }
 
 /// transform in place alpha beta and gamma using mathematical model

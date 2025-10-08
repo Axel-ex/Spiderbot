@@ -289,7 +289,7 @@ impl GaitEngine {
         }
     }
 
-    pub async fn turn_left(&mut self, times: i32) {
+    pub async fn turn_left(&mut self, times: u8) {
         let speed = self.config.spot_turn_speed;
 
         for _ in 0..times {
@@ -527,7 +527,7 @@ impl GaitEngine {
         }
     }
 
-    pub async fn turn_right(&mut self, times: i32) {
+    pub async fn turn_right(&mut self, times: u8) {
         let speed = self.config.spot_turn_speed;
 
         for _ in 0..times {
@@ -826,6 +826,7 @@ impl GaitEngine {
 
         let length = (length_x.powi(2) + length_y.powi(2) + length_z.powi(2)).sqrt();
 
+        //WARN: division by 0!
         self.temp_speed[leg][0] = length_x / length * move_speed * self.config.speed_multiple;
         self.temp_speed[leg][1] = length_y / length * move_speed * self.config.speed_multiple;
         self.temp_speed[leg][2] = length_z / length * move_speed * self.config.speed_multiple;

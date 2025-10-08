@@ -55,8 +55,6 @@ pub async fn motion_task(
             }
             _ => info!("{stamp} unknown command"),
         }
-        debug!("Gait engine state:\n {gait:?}");
-
         ticker.next().await;
     }
 }

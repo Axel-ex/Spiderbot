@@ -27,7 +27,7 @@ impl From<usize> for Leg {
             1 => Leg::BottomLeft,
             2 => Leg::FrontRight,
             3 => Leg::BottomRight,
-            _ => Leg::BottomRight,
+            _ => unreachable!(),
         }
     }
 }

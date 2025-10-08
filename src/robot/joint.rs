@@ -23,7 +23,7 @@ impl From<usize> for Joint {
             0 => Joint::Coxa,
             1 => Joint::Tibia,
             2 => Joint::Femur,
-            _ => Joint::Coxa, // default that should not occur
+            _ => unreachable!(),
         }
     }
 }

@@ -62,8 +62,7 @@ async fn main(spawner: Spawner) {
         .expect("Failed to initialize WIFI/BLE controller");
     let wifi_init = mk_static!(esp_wifi::EspWifiController, wifi_init);
 
-    let (mut wifi_controller, interfaces) =
-        esp_wifi::wifi::new(wifi_init, p.WIFI).expect("Failed to initialize WIFI controller");
+    let (mut wifi_controller, interfaces) = esp_wifi::wifi::new(wifi_init, p.WIFI).unwrap();
     configurate_and_start_wifi(&mut wifi_controller).await;
 
     //Get the embassy net stack up and working.
@@ -78,15 +77,14 @@ async fn main(spawner: Spawner) {
     );
 
     //I2c
-    let i2c_dev = I2c::new(p.I2C0, Config::default())
-        .expect("fail to create the I2c driver")
-        .with_sda(p.GPIO21)
-        .with_scl(p.GPIO22)
-        .into_async();
-
-    //Pca9685
-    let pwm =
-        Pca9685::new(i2c_dev, pwm_pca9685::Address::default()).expect("fail creating pca driver");
+    // let i2c_dev = I2c::new(p.I2C0, Config::default())
+    //     .unwrap()
+    //     .with_sda(p.GPIO21)
+    //     .with_scl(p.GPIO22)
+    //     .into_async();
+    //
+    // //Pca9685
+    // let pwm = Pca9685::new(i2c_dev, pwm_pca9685::Address::default()).unwrap();
 
     spawner
         .spawn(runner_task(runner))
@@ -100,10 +98,10 @@ async fn main(spawner: Spawner) {
             SERVO_CMD_CHANNEL.sender(),
         ))
         .expect("Fail spawning the motion task");
-    spawner
-        .spawn(servo_task(pwm, SERVO_CMD_CHANNEL.receiver()))
-        .expect("Fail spawning servo task");
-
+    // spawner
+    //     .spawn(servo_task(pwm, SERVO_CMD_CHANNEL.receiver()))
+    //     .expect("Fail spawning servo task");
+    //
     loop {
         pending::<()>().await;
     }
