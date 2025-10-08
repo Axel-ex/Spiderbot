@@ -1,7 +1,4 @@
 use core::fmt::Display;
-use core::ops::{Index, IndexMut};
-
-use super::servo::AnyServo;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Joint {
@@ -28,19 +25,5 @@ impl From<usize> for Joint {
             2 => Joint::Femur,
             _ => Joint::Coxa, // default that should not occur
         }
-    }
-}
-
-impl Index<Joint> for [AnyServo; 3] {
-    type Output = AnyServo;
-
-    fn index(&self, joint: Joint) -> &Self::Output {
-        &self[joint as usize]
-    }
-}
-
-impl IndexMut<Joint> for [AnyServo; 3] {
-    fn index_mut(&mut self, joint: Joint) -> &mut Self::Output {
-        &mut self[joint as usize]
     }
 }

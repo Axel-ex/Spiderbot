@@ -9,7 +9,6 @@ use embassy_time::Timer;
 use esp_wifi::wifi::{ClientConfiguration, WifiController, WifiDevice};
 use log::{debug, error, info, warn};
 
-/// Keeps the net stack up. (processes network events)
 #[embassy_executor::task]
 pub async fn runner_task(mut runner: embassy_net::Runner<'static, WifiDevice<'static>>) {
     runner.run().await;
@@ -102,8 +101,7 @@ pub async fn configurate_and_start_wifi(wifi_controller: &mut WifiController<'_>
         .inspect_err(|e| error!("An error occured trying to connect to wifi: {e:?}"))
         .unwrap();
 
-    match wifi_controller.rssi().ok() {
-        Some(rssi) => info!("Wifi connected! signal: {}", rssi),
-        None => info!("Wifi connected!"),
+    if let Ok(rssi) = wifi_controller.rssi() {
+        info!("Wifi connected! signal: {}", rssi)
     }
 }

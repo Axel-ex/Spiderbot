@@ -531,7 +531,7 @@ impl GaitEngine {
         let speed = self.config.spot_turn_speed;
 
         for _ in 0..times {
-            if self.current_pos[Leg::FrontRight as usize][1] == Y_START {
+            if self.current_pos[Leg::FrontRight][1] == Y_START {
                 // Leg 2 (FrontRight) & 0 (FrontLeft) move
                 self.set_site(Leg::FrontRight, X_DEFAULT + X_OFFSET, Y_START, Z_UP, speed);
                 self.send_cmd().await;

@@ -8,7 +8,6 @@
 
 extern crate alloc;
 
-use alloc::boxed::Box;
 use core::future::pending;
 use embassy_executor::Spawner;
 use embassy_net::{Config as NetConfig, StackResources};
@@ -16,9 +15,9 @@ use embassy_sync::blocking_mutex::raw::CriticalSectionRawMutex;
 use embassy_sync::channel::Channel;
 use esp_backtrace as _;
 use esp_hal::clock::CpuClock;
-use esp_hal::gpio::{AnyPin, Pin};
+use esp_hal::i2c::master::{Config, I2c};
 use esp_hal::timer::timg::TimerGroup;
-use log::info;
+use pwm_pca9685::Pca9685;
 use spider_robot::robot::commands::{ServoCommand, TcpCommand};
 use spider_robot::tasks::motion_task::motion_task;
 use spider_robot::tasks::net_task::{configurate_and_start_wifi, runner_task, tcp_server};
@@ -32,12 +31,6 @@ esp_bootloader_esp_idf::esp_app_desc!();
 //FRONT_R: [12, 13, 19]
 //BOTTOM_R: [18, 5, 17]
 
-// #[panic_handler]
-// fn panic(info: &core::panic::PanicInfo) -> ! {
-//     println!("Panic: {}", info);
-//     loop {}
-// }
-//
 static TCP_CMD_CHANNEL: Channel<CriticalSectionRawMutex, TcpCommand, 3> = Channel::new();
 static SERVO_CMD_CHANNEL: Channel<CriticalSectionRawMutex, ServoCommand, 3> = Channel::new();
 
@@ -67,27 +60,13 @@ async fn main(spawner: Spawner) {
     let timer1 = TimerGroup::new(p.TIMG0);
     let wifi_init = esp_wifi::init(timer1.timer0, rng, p.RADIO_CLK)
         .expect("Failed to initialize WIFI/BLE controller");
-    let wifi_init = Box::leak(Box::new(wifi_init));
+    let wifi_init = mk_static!(esp_wifi::EspWifiController, wifi_init);
+
     let (mut wifi_controller, interfaces) =
         esp_wifi::wifi::new(wifi_init, p.WIFI).expect("Failed to initialize WIFI controller");
     configurate_and_start_wifi(&mut wifi_controller).await;
 
-    let servo_pins: [AnyPin<'static>; 12] = [
-        p.GPIO32.degrade(),
-        p.GPIO33.degrade(),
-        p.GPIO25.degrade(),
-        p.GPIO26.degrade(),
-        p.GPIO27.degrade(),
-        p.GPIO14.degrade(),
-        p.GPIO12.degrade(),
-        p.GPIO13.degrade(),
-        p.GPIO19.degrade(),
-        p.GPIO18.degrade(),
-        p.GPIO5.degrade(),
-        p.GPIO17.degrade(),
-    ];
-
-    //Get trhe embassy net stack up and working.
+    //Get the embassy net stack up and working.
     let seed = (rng.random() as u64) << 32 | rng.random() as u64;
     let config = NetConfig::dhcpv4(Default::default());
     let device = interfaces.sta;
@@ -98,12 +77,23 @@ async fn main(spawner: Spawner) {
         seed,
     );
 
+    //I2c
+    let i2c_dev = I2c::new(p.I2C0, Config::default())
+        .expect("fail to create the I2c driver")
+        .with_sda(p.GPIO21)
+        .with_scl(p.GPIO22)
+        .into_async();
+
+    //Pca9685
+    let pwm =
+        Pca9685::new(i2c_dev, pwm_pca9685::Address::default()).expect("fail creating pca driver");
+
     spawner
         .spawn(runner_task(runner))
-        .expect("Fail spawning runner task"); //keeps net stack alive
+        .expect("Fail spawning runner task");
     spawner
         .spawn(tcp_server(stack, TCP_CMD_CHANNEL.sender()))
-        .expect("Fail spawning net task"); //Listen for tcp commands to forward to motion task
+        .expect("Fail spawning net task");
     spawner
         .spawn(motion_task(
             TCP_CMD_CHANNEL.receiver(),
@@ -111,7 +101,7 @@ async fn main(spawner: Spawner) {
         ))
         .expect("Fail spawning the motion task");
     spawner
-        .spawn(servo_task(servo_pins, p.LEDC, SERVO_CMD_CHANNEL.receiver()))
+        .spawn(servo_task(pwm, SERVO_CMD_CHANNEL.receiver()))
         .expect("Fail spawning servo task");
 
     loop {
