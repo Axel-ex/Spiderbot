@@ -1,7 +1,7 @@
 use crate::robot::{joint::Joint, leg::Leg};
 use esp_hal::ledc::{channel::Channel, HighSpeed, LowSpeed};
 use fugit::Hertz;
-use log::{debug, error};
+use log::error;
 
 use embedded_hal::pwm::SetDutyCycle;
 #[derive(Debug)]
@@ -90,10 +90,6 @@ where
             );
         }
     }
-
-    pub fn angle(&self) -> u8 {
-        self.angle
-    }
 }
 
 /// The AnyServo enum serves as a wrapper around servos that might old different underlying
@@ -104,13 +100,6 @@ impl AnyServo {
         match self {
             AnyServo::Low(servo) => servo.set_angle(angle),
             AnyServo::High(servo) => servo.set_angle(angle),
-        }
-    }
-
-    fn angle(&self) -> u8 {
-        match self {
-            AnyServo::Low(servo) => servo.angle(),
-            AnyServo::High(servo) => servo.angle(),
         }
     }
 }

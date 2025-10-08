@@ -37,7 +37,7 @@ esp_bootloader_esp_idf::esp_app_desc!();
 //     println!("Panic: {}", info);
 //     loop {}
 // }
-//
+
 static TCP_CMD_CHANNEL: Channel<CriticalSectionRawMutex, TcpCommand, 3> = Channel::new();
 static SERVO_CMD_CHANNEL: Channel<CriticalSectionRawMutex, ServoCommand, 3> = Channel::new();
 
@@ -110,12 +110,13 @@ async fn main(spawner: Spawner) {
             TCP_CMD_CHANNEL.receiver(),
             SERVO_CMD_CHANNEL.sender(),
         ))
-        .expect("Fail spawning the motion task");
+        .expect("Fail spawning the motion task"); // listen for commands forwarded from the tcp
+                                                  // server
     spawner
         .spawn(servo_task(servo_pins, p.LEDC, SERVO_CMD_CHANNEL.receiver()))
-        .expect("Fail spawning servo task");
+        .expect("Fail spawning servo task"); // Moves the servo based on the received command
 
     loop {
-        pending::<()>().await;
+        pending::<()>().await; //the main loop doesnt perform any job
     }
 }
