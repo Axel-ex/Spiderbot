@@ -51,7 +51,6 @@ macro_rules! mk_static {
 #[esp_hal_embassy::main]
 async fn main(spawner: Spawner) {
     //Boilerplate to init clocks, setup the heap and take important peripherals
-    info!("Starting spider robot...");
     esp_println::logger::init_logger_from_env();
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let p = esp_hal::init(config);

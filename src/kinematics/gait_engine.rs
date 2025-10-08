@@ -1,7 +1,4 @@
-use crate::{
-    kinematics::gait_engine,
-    robot::{commands::ServoCommand, config::*, leg::Leg},
-};
+use crate::robot::{commands::ServoCommand, config::*, leg::Leg};
 use core::f32;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Sender, signal::Signal};
 use embassy_time::{with_timeout, Duration};
@@ -79,8 +76,6 @@ impl GaitEngine {
             }
         }
         self.send_cmd().await;
-
-        info!("Spider robot initialized!");
     }
 
     pub async fn calibrate(&mut self) {
@@ -103,8 +98,6 @@ impl GaitEngine {
             Ok(_) => self.current_pos = self.expected_pos,
             Err(_) => error!("[MOTION_TASK] command timed out"),
         }
-
-        debug!("{:?}", self);
     }
 
     pub async fn do_test(&mut self) {
@@ -303,7 +296,6 @@ impl GaitEngine {
             if self.current_pos[Leg::BottomRight][1] == Y_START {
                 // Leg 3 & 1 move
                 self.set_site(Leg::BottomRight, X_DEFAULT + X_OFFSET, Y_START, Z_UP, speed);
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 self.set_site(
@@ -334,7 +326,6 @@ impl GaitEngine {
                     Z_UP,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 self.set_site(
@@ -344,7 +335,6 @@ impl GaitEngine {
                     Z_DEFAULT,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 self.set_site(
@@ -375,7 +365,6 @@ impl GaitEngine {
                     Z_DEFAULT,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 self.set_site(
@@ -385,7 +374,6 @@ impl GaitEngine {
                     Z_UP,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 self.set_site(
@@ -410,7 +398,6 @@ impl GaitEngine {
                     Z_DEFAULT,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 self.set_site(
@@ -420,12 +407,10 @@ impl GaitEngine {
                     Z_DEFAULT,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
             } else {
                 // Leg 0 & 2 move
                 self.set_site(Leg::FrontLeft, X_DEFAULT + X_OFFSET, Y_START, Z_UP, speed);
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 self.set_site(
@@ -456,7 +441,6 @@ impl GaitEngine {
                     Z_DEFAULT,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 self.set_site(
@@ -466,7 +450,6 @@ impl GaitEngine {
                     Z_DEFAULT,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 self.set_site(
@@ -497,7 +480,6 @@ impl GaitEngine {
                     Z_DEFAULT,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 self.set_site(
@@ -507,7 +489,6 @@ impl GaitEngine {
                     Z_UP,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 self.set_site(
@@ -532,7 +513,6 @@ impl GaitEngine {
                     Z_DEFAULT,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 self.set_site(
@@ -542,7 +522,6 @@ impl GaitEngine {
                     Z_DEFAULT,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
             }
         }

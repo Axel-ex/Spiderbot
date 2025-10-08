@@ -15,8 +15,7 @@ pub async fn motion_task(
     let mut ticker = Ticker::every(Duration::from_millis(20));
     let mut gait = GaitEngine::new(servo_cmd_sender);
     gait.init_positions().await;
-    debug!("Gait engine inited!\n {gait:?}");
-    info!("{:?}", gait.config());
+    debug!("{:?}", gait.config());
 
     loop {
         info!("[MOTION_TASK] listening for command...");

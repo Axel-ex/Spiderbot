@@ -5,7 +5,7 @@ use alloc::string::String;
 use core::str::FromStr;
 use embassy_net::{tcp::TcpSocket, IpListenEndpoint, Stack};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Sender};
-use embassy_time::{Duration, Timer};
+use embassy_time::Timer;
 use esp_wifi::wifi::{ClientConfiguration, WifiController, WifiDevice};
 use log::{debug, error, info, warn};
 
@@ -22,26 +22,29 @@ pub async fn tcp_server(
 ) {
     let mut rx_buf = [0u8; 128];
     let mut tx_buf = [0u8; 128];
+    let port = 1234;
+
+    while !stack.is_link_up() {
+        Timer::after_millis(500).await;
+    }
+
+    if let Some(config) = stack.config_v4() {
+        info!(
+            "TCP server listening at address {}:{}",
+            config.address, port
+        );
+    }
 
     loop {
-        // Create NEW socket for each connection
         let mut socket = TcpSocket::new(stack, &mut rx_buf, &mut tx_buf);
-        // socket.set_timeout(Some(Duration::from_secs(2)));
 
-        info!("Waiting for connection...");
-        match socket
-            .accept(IpListenEndpoint {
-                port: 1234,
-                addr: None,
-            })
-            .await
-        {
+        match socket.accept(IpListenEndpoint { port, addr: None }).await {
             Ok(_) => {
                 debug!("Client connected!");
                 handle_connection(&mut socket, &cmd_sender).await;
             }
             Err(e) => {
-                debug!("Accept failed: {:?}", e);
+                error!("Accept failed: {:?}", e);
                 Timer::after_millis(500).await; // Backoff delay
                 continue;
             }
@@ -58,7 +61,7 @@ pub async fn handle_connection(
         match socket.read(&mut buf).await {
             Ok(0) => break,
             Ok(n) => {
-                let received_str = core::str::from_utf8(&buf[..n]).unwrap();
+                let received_str = core::str::from_utf8(&buf[..n]).unwrap().trim();
                 if let Ok(cmd) = TcpCommand::try_from(received_str) {
                     cmd_sender.send(cmd).await;
                 } else {
