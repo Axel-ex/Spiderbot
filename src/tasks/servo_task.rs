@@ -17,14 +17,16 @@ use esp_hal::{i2c::master::I2c, Async};
 use log::debug;
 use pwm_pca9685::Pca9685;
 
+const UPDATE_PERIOD_MS: u64 = 20;
+
 #[embassy_executor::task]
 pub async fn servo_task(
     mut pwm: Pca9685<I2c<'static, Async>>,
     receiver: Receiver<'static, CriticalSectionRawMutex, ServoCommand, 3>,
 ) {
-    pwm.set_prescale(100)
+    pwm.set_prescale(121)
         .await
-        .expect("Fail configurating pca driver"); //WARN: need 50Hz
+        .expect("Fail configurating pca driver"); //prescale=(25,000,000 / 4096×50) −1
     pwm.enable().await.expect("Fail enabling the pca driver");
 
     loop {
@@ -35,7 +37,7 @@ pub async fn servo_task(
 }
 
 pub async fn update_position(mut cmd: ServoCommand, pwm: &mut Pca9685<I2c<'static, Async>>) {
-    let mut ticker = Ticker::every(Duration::from_millis(20));
+    let mut ticker = Ticker::every(Duration::from_millis(UPDATE_PERIOD_MS));
 
     loop {
         for leg in 0..4 {

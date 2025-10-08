@@ -13,12 +13,14 @@ use embassy_sync::{
 use embassy_time::{Duration, Ticker};
 use log::{debug, info};
 
+const UPDATE_PERIOD_MS: u64 = 20;
+
 #[embassy_executor::task]
 pub async fn motion_task(
     tcp_cmd_receiver: Receiver<'static, CriticalSectionRawMutex, TcpCommand, 3>,
     servo_cmd_sender: Sender<'static, CriticalSectionRawMutex, ServoCommand, 3>,
 ) {
-    let mut ticker = Ticker::every(Duration::from_millis(20));
+    let mut ticker = Ticker::every(Duration::from_millis(UPDATE_PERIOD_MS));
     let mut gait = GaitEngine::new(servo_cmd_sender);
     gait.init_positions().await;
     debug!("{:?}", gait.config());
@@ -40,7 +42,7 @@ pub async fn motion_task(
                 gait.step_forward(n).await;
             }
             TcpCommand::Wave(n) => {
-                info!("{stamp} wave command");
+                info!("{stamp} wave {n}");
                 gait.wave(n).await;
             }
             TcpCommand::Sit => {

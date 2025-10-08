@@ -15,6 +15,9 @@ use embassy_time::Timer;
 use esp_wifi::wifi::{ClientConfiguration, WifiController, WifiDevice};
 use log::{debug, error, info, warn};
 
+const PORT: u16 = 1234;
+const RX_BUF_SIZE: usize = 128;
+
 #[embassy_executor::task]
 pub async fn runner_task(mut runner: embassy_net::Runner<'static, WifiDevice<'static>>) {
     runner.run().await;
@@ -27,7 +30,6 @@ pub async fn tcp_server(
 ) {
     let mut rx_buf = [0u8; 128];
     let mut tx_buf = [0u8; 128];
-    let port = 1234;
 
     while !stack.is_link_up() {
         Timer::after_millis(500).await;
@@ -36,14 +38,20 @@ pub async fn tcp_server(
     if let Some(config) = stack.config_v4() {
         info!(
             "TCP server listening at address {}:{}",
-            config.address, port
+            config.address, PORT
         );
     }
 
     loop {
         let mut socket = TcpSocket::new(stack, &mut rx_buf, &mut tx_buf);
 
-        match socket.accept(IpListenEndpoint { port, addr: None }).await {
+        match socket
+            .accept(IpListenEndpoint {
+                port: PORT,
+                addr: None,
+            })
+            .await
+        {
             Ok(_) => {
                 debug!("Client connected!");
                 handle_connection(&mut socket, &cmd_sender).await;
@@ -61,12 +69,12 @@ pub async fn handle_connection(
     socket: &mut TcpSocket<'_>,
     cmd_sender: &Sender<'static, CriticalSectionRawMutex, TcpCommand, 3>,
 ) {
-    let mut buf = [0u8; 128];
+    let mut rx_buf = [0u8; RX_BUF_SIZE];
     loop {
-        match socket.read(&mut buf).await {
+        match socket.read(&mut rx_buf).await {
             Ok(0) => break,
             Ok(n) => {
-                let received_str = core::str::from_utf8(&buf[..n]).unwrap().trim();
+                let received_str = core::str::from_utf8(&rx_buf[..n]).unwrap().trim();
                 if let Ok(cmd) = TcpCommand::try_from(received_str) {
                     cmd_sender.send(cmd).await;
                 } else {
