@@ -6,11 +6,14 @@
 //! Handles servo timing and error reporting.
 extern crate alloc;
 
-use crate::kinematics::{
-    conversion::{cartesian_to_polar, polar_to_servo},
-    gait_engine::MOVEMENT_COMPLETED,
-};
 use crate::robot::commands::ServoCommand;
+use crate::{
+    kinematics::{
+        conversion::{cartesian_to_polar, polar_to_servo, set_leg_angles},
+        gait_engine::MOVEMENT_COMPLETED,
+    },
+    robot::leg::Leg,
+};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Receiver};
 use embassy_time::{Duration, Ticker};
 use esp_hal::{i2c::master::I2c, Async};
@@ -28,6 +31,10 @@ pub async fn servo_task(
         .await
         .expect("Fail configurating pca driver"); //prescale=(25,000,000 / 4096×50) −1
     pwm.enable().await.expect("Fail enabling the pca driver");
+
+    set_leg_angles(&mut pwm, Leg::FrontRight, 90.0, 45.0, 70.0).await;
+    set_leg_angles(&mut pwm, Leg::BottomLeft, 90.0, 45.0, 70.0).await;
+    set_leg_angles(&mut pwm, Leg::BottomRight, 90.0, 45.0, 70.0).await;
 
     loop {
         let cmd = receiver.receive().await;

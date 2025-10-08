@@ -84,7 +84,7 @@ async fn main(spawner: Spawner) {
         .into_async();
 
     //Pca9685
-    let pwm = Pca9685::new(i2c_dev, pwm_pca9685::Address::default()).unwrap();
+    let pwm = Pca9685::new(i2c_dev, pwm_pca9685::Address::from(0x7f)).unwrap();
 
     spawner
         .spawn(runner_task(runner))

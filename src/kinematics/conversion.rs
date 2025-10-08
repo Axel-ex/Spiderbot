@@ -22,7 +22,7 @@ const SERVO_ANGLE_RANGE: f32 = 180.0;
 const PCA_FREQUENCY_HZ: u32 = 50;
 const PCA_PERIOD_US: f32 = 1_000_000.0 / PCA_FREQUENCY_HZ as f32; // 20000 µs
 
-//[coxa, ribia, femur]
+//[coxa, tibia, femur]
 static SERVO_CHANNEL_MAP: [[Channel; 3]; 4] = [
     [Channel::C0, Channel::C1, Channel::C2],   // front right
     [Channel::C3, Channel::C4, Channel::C5],   // bottom left
@@ -38,7 +38,7 @@ fn angle_to_ticks(angle: f32) -> u16 {
     tick.round().clamp(0.0, 4095.0) as u16
 }
 
-async fn set_leg_angles(
+pub async fn set_leg_angles(
     pwm: &mut Pca9685<I2c<'static, Async>>,
     leg: Leg,
     alpha: f32,
