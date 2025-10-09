@@ -290,8 +290,179 @@ impl GaitEngine {
     }
 
     pub async fn step_backward(&mut self, times: u8) {
+        let leg_speed = self.config.leg_move_speed;
+        let body_speed = self.config.body_move_speed;
+
         for _ in 0..times {
-            todo!()
+            if self.current_pos[Leg::BottomRight][1] == Y_START {
+                // Leg 3 (BottomRight) & 0 (FrontLeft) move
+                self.set_site(
+                    Leg::BottomRight,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START,
+                    Z_UP,
+                    leg_speed,
+                );
+                self.send_cmd().await;
+                self.set_site(
+                    Leg::BottomRight,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START + 2.0 * Y_STEP,
+                    Z_UP,
+                    leg_speed,
+                );
+                self.send_cmd().await;
+
+                self.set_site(
+                    Leg::BottomRight,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START + 2.0 * Y_STEP,
+                    Z_DEFAULT,
+                    leg_speed,
+                );
+                self.send_cmd().await;
+
+                // Body shift
+                self.set_site(
+                    Leg::FrontLeft,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START + 2.0 * Y_STEP,
+                    Z_DEFAULT,
+                    body_speed,
+                );
+                self.set_site(
+                    Leg::BottomLeft,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START,
+                    Z_DEFAULT,
+                    body_speed,
+                );
+                self.set_site(
+                    Leg::FrontRight,
+                    X_DEFAULT - X_OFFSET,
+                    Y_START + Y_STEP,
+                    Z_DEFAULT,
+                    body_speed,
+                );
+                self.set_site(
+                    Leg::BottomRight,
+                    X_DEFAULT - X_OFFSET,
+                    Y_START + Y_STEP,
+                    Z_DEFAULT,
+                    body_speed,
+                );
+                self.send_cmd().await;
+
+                // Move other leg
+                self.set_site(
+                    Leg::FrontLeft,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START + 2.0 * Y_STEP,
+                    Z_UP,
+                    leg_speed,
+                );
+                self.send_cmd().await;
+                self.set_site(
+                    Leg::FrontLeft,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START,
+                    Z_UP,
+                    leg_speed,
+                );
+                self.send_cmd().await;
+                self.set_site(
+                    Leg::FrontLeft,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START,
+                    Z_DEFAULT,
+                    leg_speed,
+                );
+                self.send_cmd().await;
+            } else {
+                // Leg 1 (BottomLeft) & 2 (FrontRight) move
+                self.set_site(
+                    Leg::BottomLeft,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START,
+                    Z_UP,
+                    leg_speed,
+                );
+                self.send_cmd().await;
+                self.set_site(
+                    Leg::BottomLeft,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START + 2.0 * Y_STEP,
+                    Z_UP,
+                    leg_speed,
+                );
+                self.send_cmd().await;
+                self.set_site(
+                    Leg::BottomLeft,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START + 2.0 * Y_STEP,
+                    Z_DEFAULT,
+                    leg_speed,
+                );
+                self.send_cmd().await;
+
+                // Body shift
+                self.set_site(
+                    Leg::FrontLeft,
+                    X_DEFAULT - X_OFFSET,
+                    Y_START + Y_STEP,
+                    Z_DEFAULT,
+                    body_speed,
+                );
+                self.set_site(
+                    Leg::BottomLeft,
+                    X_DEFAULT - X_OFFSET,
+                    Y_START + Y_STEP,
+                    Z_DEFAULT,
+                    body_speed,
+                );
+                self.set_site(
+                    Leg::FrontRight,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START + 2.0 * Y_STEP,
+                    Z_DEFAULT,
+                    body_speed,
+                );
+                self.set_site(
+                    Leg::BottomRight,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START,
+                    Z_DEFAULT,
+                    body_speed,
+                );
+
+                self.send_cmd().await;
+
+                // Move other leg
+                self.set_site(
+                    Leg::FrontRight,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START + 2.0 * Y_STEP,
+                    Z_UP,
+                    leg_speed,
+                );
+                self.send_cmd().await;
+                self.set_site(
+                    Leg::FrontRight,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START,
+                    Z_UP,
+                    leg_speed,
+                );
+                self.send_cmd().await;
+                self.set_site(
+                    Leg::FrontRight,
+                    X_DEFAULT + X_OFFSET,
+                    Y_START,
+                    Z_DEFAULT,
+                    leg_speed,
+                );
+                self.send_cmd().await;
+            }
         }
     }
 

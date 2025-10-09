@@ -36,6 +36,10 @@ pub async fn motion_task(
                 info!("{stamp} step forward {n}");
                 gait.step_forward(n).await;
             }
+            TcpCommand::StepBackward(n) => {
+                info!("{stamp} step backward {n}");
+                gait.step_backward(n).await;
+            }
             TcpCommand::Wave(n) => {
                 info!("{stamp} wave {n}");
                 gait.wave(n).await;
