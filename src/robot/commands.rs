@@ -5,7 +5,7 @@
 //!
 //! Used by the network, motion, and servo tasks.
 pub enum TcpCommand {
-    Calibrate,
+    CloseConnection,
     Test,
     Sit,
     Stand,
@@ -32,12 +32,12 @@ impl TryFrom<&str> for TcpCommand {
             .unwrap_or(1);
 
         match cmd {
+            "close" => Ok(TcpCommand::CloseConnection),
             "t" => Ok(TcpCommand::Test),
             "w" => Ok(TcpCommand::Wave(steps)),
             "d" => Ok(TcpCommand::StepForward(steps)),
             "r" => Ok(TcpCommand::Sit),
             "s" => Ok(TcpCommand::Stand),
-            "c" => Ok(TcpCommand::Calibrate),
             "tl" => Ok(TcpCommand::TurnLeft(steps)),
             "tr" => Ok(TcpCommand::TurnRight(steps)),
             _ => Err(ParseCommandError),

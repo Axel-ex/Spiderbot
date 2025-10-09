@@ -33,9 +33,8 @@ pub async fn motion_task(
                 info!("{stamp} test");
                 gait.do_test().await;
             }
-            TcpCommand::Calibrate => {
-                info!("{stamp} calibrate");
-                gait.calibrate().await;
+            TcpCommand::CloseConnection => {
+                info!("{stamp} close connection");
             }
             TcpCommand::StepForward(n) => {
                 info!("{stamp} step forward {n}");

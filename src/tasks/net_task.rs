@@ -17,6 +17,7 @@ use log::{debug, error, info, warn};
 
 const PORT: u16 = 1234;
 const RX_BUF_SIZE: usize = 128;
+const TX_BUF_SIZE: usize = 128;
 
 #[embassy_executor::task]
 pub async fn runner_task(mut runner: embassy_net::Runner<'static, WifiDevice<'static>>) {
@@ -28,8 +29,8 @@ pub async fn tcp_server(
     stack: Stack<'static>,
     cmd_sender: Sender<'static, CriticalSectionRawMutex, TcpCommand, 3>,
 ) {
-    let mut rx_buf = [0u8; 128];
-    let mut tx_buf = [0u8; 128];
+    let mut rx_buf = [0u8; RX_BUF_SIZE];
+    let mut tx_buf = [0u8; TX_BUF_SIZE];
 
     while !stack.is_link_up() {
         Timer::after_millis(500).await;
@@ -76,11 +77,13 @@ pub async fn handle_connection(
             Ok(n) => {
                 let received_str = core::str::from_utf8(&rx_buf[..n]).unwrap().trim();
                 if let Ok(cmd) = TcpCommand::try_from(received_str) {
-                    cmd_sender.send(cmd).await;
+                    match cmd {
+                        TcpCommand::CloseConnection => break, // special case
+                        _ => cmd_sender.send(cmd).await,
+                    }
                 } else {
                     warn!("Unrecognised command: {}", received_str);
                 }
-                break; // Close socket after first command
             }
             Err(e) => {
                 error!("Read error: {:?}", e);
