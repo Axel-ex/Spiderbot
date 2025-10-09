@@ -33,11 +33,11 @@ impl TryFrom<&str> for TcpCommand {
 
         match cmd {
             "close" => Ok(TcpCommand::CloseConnection),
-            "t" => Ok(TcpCommand::Test),
+            "test" => Ok(TcpCommand::Test),
             "w" => Ok(TcpCommand::Wave(steps)),
-            "d" => Ok(TcpCommand::StepForward(steps)),
-            "r" => Ok(TcpCommand::Sit),
-            "s" => Ok(TcpCommand::Stand),
+            "sf" => Ok(TcpCommand::StepForward(steps)),
+            "sit" => Ok(TcpCommand::Sit),
+            "stand" => Ok(TcpCommand::Stand),
             "tl" => Ok(TcpCommand::TurnLeft(steps)),
             "tr" => Ok(TcpCommand::TurnRight(steps)),
             _ => Err(ParseCommandError),

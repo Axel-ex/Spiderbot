@@ -14,7 +14,7 @@ use crate::robot::commands::ServoCommand;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Receiver};
 use embassy_time::{Duration, Ticker};
 use esp_hal::{i2c::master::I2c, Async};
-use log::debug;
+use log::{debug, info};
 use pwm_pca9685::Pca9685;
 
 const UPDATE_PERIOD_MS: u64 = 20;
@@ -28,18 +28,24 @@ pub async fn servo_task(
         .await
         .expect("Fail configurating pca driver"); //prescale=(25,000,000 / 4096×50) −1
     pwm.enable().await.expect("Fail enabling the pca driver");
+    let mut ticker = Ticker::every(Duration::from_millis(UPDATE_PERIOD_MS));
 
+    let mut cmd = receiver.receive().await;
     loop {
-        let cmd = receiver.receive().await;
+        update_position(&mut cmd, &mut pwm).await;
+        if let Ok(new_cmd) = receiver.try_receive() {
+            cmd = new_cmd;
+        }
         debug!("[SERVO_TASK] Received a command!");
-        update_position(cmd, &mut pwm).await;
+        ticker.next().await;
     }
 }
 
-pub async fn update_position(mut cmd: ServoCommand, pwm: &mut Pca9685<I2c<'static, Async>>) {
+pub async fn update_position(cmd: &mut ServoCommand, pwm: &mut Pca9685<I2c<'static, Async>>) {
     let mut ticker = Ticker::every(Duration::from_millis(UPDATE_PERIOD_MS));
 
     loop {
+        let now = embassy_time::Instant::now();
         for leg in 0..4 {
             for pos in 0..3 {
                 let diff = (cmd.current_pos[leg][pos] - cmd.expected_pos[leg][pos]).abs();
@@ -61,6 +67,8 @@ pub async fn update_position(mut cmd: ServoCommand, pwm: &mut Pca9685<I2c<'stati
         if movement_is_done(&cmd) {
             break;
         }
+        info!("tick at: {}", now.as_micros());
+
         ticker.next().await;
     }
     MOVEMENT_COMPLETED.signal(());

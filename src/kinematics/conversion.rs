@@ -22,6 +22,7 @@ const SERVO_MAX_PULSE_US: f32 = 2400.0;
 const SERVO_ANGLE_RANGE: f32 = 180.0;
 const PCA_FREQUENCY_HZ: u32 = 50;
 const PCA_PERIOD_US: f32 = 1_000_000.0 / PCA_FREQUENCY_HZ as f32; // 20000 µs
+const PRESCALE_REG_SIZE: f32 = 4096.0;
 
 //[femur, tibia, coxa]
 static SERVO_CHANNEL_MAP: [[Channel; 3]; 4] = [
@@ -34,12 +35,12 @@ static SERVO_CHANNEL_MAP: [[Channel; 3]; 4] = [
 fn angle_to_ticks(angle: f32) -> u16 {
     let pulse_width_range = SERVO_MAX_PULSE_US - SERVO_MIN_PULSE_US;
     let pulse_us = SERVO_MIN_PULSE_US + (angle / SERVO_ANGLE_RANGE) * pulse_width_range;
-    let tick = (pulse_us / PCA_PERIOD_US) * 4096.0;
+    let tick = (pulse_us / PCA_PERIOD_US) * PRESCALE_REG_SIZE;
     // Clamp the value to the valid PCA9685 range
-    tick.round().clamp(0.0, 4095.0) as u16
+    tick.round().clamp(0.0, PRESCALE_REG_SIZE - 1.0) as u16
 }
 
-pub async fn set_leg_angles(
+async fn set_leg_angles(
     pwm: &mut Pca9685<I2c<'static, Async>>,
     leg: Leg,
     alpha: f32,
