@@ -9,6 +9,7 @@ use micromath::F32Ext;
 
 use crate::robot::{
     config::{LENGTH_A, LENGTH_B, LENGTH_C},
+    joint::Joint,
     leg::Leg,
 };
 use esp_hal::{i2c::master::I2c, Async};
@@ -22,11 +23,11 @@ const SERVO_ANGLE_RANGE: f32 = 180.0;
 const PCA_FREQUENCY_HZ: u32 = 50;
 const PCA_PERIOD_US: f32 = 1_000_000.0 / PCA_FREQUENCY_HZ as f32; // 20000 µs
 
-//[coxa, tibia, femur]
+//[femur, tibia, coxa]
 static SERVO_CHANNEL_MAP: [[Channel; 3]; 4] = [
-    [Channel::C0, Channel::C1, Channel::C2],   // front right
+    [Channel::C0, Channel::C1, Channel::C2],   // front left
     [Channel::C3, Channel::C4, Channel::C5],   // bottom left
-    [Channel::C6, Channel::C7, Channel::C8],   // front left
+    [Channel::C6, Channel::C7, Channel::C8],   // front right
     [Channel::C9, Channel::C10, Channel::C11], // bottom right
 ];
 
@@ -45,18 +46,27 @@ pub async fn set_leg_angles(
     beta: f32,
     gamma: f32,
 ) {
-    let coxa_tick = angle_to_ticks(alpha);
+    let femur_tick = angle_to_ticks(alpha);
     let tibia_tick = angle_to_ticks(beta);
-    let femur_tick = angle_to_ticks(gamma);
+    let coxa_tick = angle_to_ticks(gamma);
 
     let channels = SERVO_CHANNEL_MAP[leg as usize];
-    if let Err(e) = pwm.set_channel_on_off(channels[0], 0, coxa_tick).await {
+    if let Err(e) = pwm
+        .set_channel_on_off(channels[Joint::Femur as usize], 0, femur_tick)
+        .await
+    {
         error!("{e}");
     }
-    if let Err(e) = pwm.set_channel_on_off(channels[1], 0, tibia_tick).await {
+    if let Err(e) = pwm
+        .set_channel_on_off(channels[Joint::Tibia as usize], 0, tibia_tick)
+        .await
+    {
         error!("{e}");
     }
-    if let Err(e) = pwm.set_channel_on_off(channels[2], 0, femur_tick).await {
+    if let Err(e) = pwm
+        .set_channel_on_off(channels[Joint::Coxa as usize], 0, coxa_tick)
+        .await
+    {
         error!("{e}");
     }
 }

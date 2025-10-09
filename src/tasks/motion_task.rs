@@ -22,7 +22,7 @@ pub async fn motion_task(
 ) {
     let mut ticker = Ticker::every(Duration::from_millis(UPDATE_PERIOD_MS));
     let mut gait = GaitEngine::new(servo_cmd_sender);
-    // gait.init_positions().await;
+    gait.init_positions().await;
     debug!("{:?}", gait.config());
 
     loop {

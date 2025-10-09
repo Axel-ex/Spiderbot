@@ -6,17 +6,17 @@ use core::fmt::Display;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Joint {
-    Coxa = 0,
+    Femur = 0,
     Tibia = 1,
-    Femur = 2,
+    Coxa = 2,
 }
 
 impl Display for Joint {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         match self {
-            Joint::Coxa => f.write_str("coxa"),
             Joint::Femur => f.write_str("femur"),
             Joint::Tibia => f.write_str("tibia"),
+            Joint::Coxa => f.write_str("coxa"),
         }
     }
 }
@@ -24,9 +24,9 @@ impl Display for Joint {
 impl From<usize> for Joint {
     fn from(value: usize) -> Self {
         match value {
-            0 => Joint::Coxa,
+            0 => Joint::Femur,
             1 => Joint::Tibia,
-            2 => Joint::Femur,
+            2 => Joint::Coxa,
             _ => unreachable!(),
         }
     }
