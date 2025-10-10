@@ -18,10 +18,10 @@ The project draws heavy inspiration from the [DIY Spider Robot](https://www.inst
    1. [Architecture Overview](#architecture-overview)
    2. [Why a PCA9685 Servo Driver?](#why-a-pca9685-servo-driver)
 4. [Build It Yourself](#build-it-yourself)
-   1. [Step 1: Assembly](#step-1-assembly)
-   2. [Step 2: Wiring](#step-2-wiring)
-   3. [Step 3: Flashing the Firmware](#step-3-flashing-the-firmware)
-   4. [Step 4: Controlling the Robot](#step-4-controlling-the-robot)
+   1. [Assembly](#assembly)
+   2. [Wiring](#wiring)
+   3. [Flashing the Firmware](#flashing-the-firmware)
+   4. [Controlling the Robot](#controlling-the-robot)
 5. [Troubleshooting](#troubleshooting)
 6. [Contributing](#contributing)
 
@@ -44,7 +44,7 @@ Remote control is handled over Wi-Fi through a lightweight TCP server running on
 | 3D Printed Robot Chassis | 1 | STL files are available in the original [Instructables guide](https://www.instructables.com/DIY-Spider-RobotQuad-robot-Quadruped/). |
 | Jumper Wires | Various | For connecting the components. |
 
-### Wiring Diagram
+### Wiring
 
 #### ESP32 Connections
 
@@ -104,21 +104,23 @@ The original project relied heavily on global shared state, which made it diffic
 
 ### Why a PCA9685 Servo Driver?
 
-While the ESP32 has a built-in PWM generator (`ledc`), it's not ideal for robotics applications requiring synchronised multi-joint movement (learned the hard way). Each `ledc` channel runs on its own timer. When you command a leg to move, its three servos need to start and stop turning at *precisely* the same time for smooth, coordinated motion.
+While the ESP32 has a built-in PWM generator (`ledc`), it's not ideal for robotics applications requiring synchronised multi-joint movement (learned the hard way). The 16 ledc channels can not share one single timer, and having the timer in sync is a non trivial task.  When you command a leg to move, its three servos need to start and stop turning at *precisely* the same time for smooth, coordinated motion.
 
 The **PCA9685** solves this problem. It's a dedicated I2C PWM driver that allows you to update the pulse width for all 16 channels in a single, atomic-like operation. The firmware can calculate the positions for all 12 servos and send the update command, ensuring all servos refresh in unison. The result is the fluid, life-like motion essential for a legged robot.
 
+ESP32 also has better suited peripherals for motor control namely `mcpwm`, or even `rmt` to synchronize ledc signals, but I couldn't really wrap my head around and was limited in time so I went for the easy solution and bought extra hardware. See those link for more informations on channels synchronization on ESP32: [mcpwm](https://docs.rs/esp-hal/latest/esp_hal/mcpwm/index.html), [rmt](https://docs.espressif.com/projects/esp-idf/en/stable/esp32/api-reference/peripherals/rmt.html).
+
 ## Build It Yourself
 
-### Step 1: Assembly
+###  Assembly
 
 First, 3D print and assemble the robot's chassis and legs. Follow the excellent guide provided in the original [Instructables project](https://www.instructables.com/DIY-Spider-RobotQuad-robot-Quadruped/).
 
-### Step 2: Wiring
+### Wiring
 
 Wire the components together according to the [wiring diagram](#wiring-diagram) section above. Double-check the polarity and connector orientation before powering anything to avoid damaging your components.
 
-### Step 3: Flashing the Firmware
+### Flashing the Firmware
 
 **Prerequisites:**
 
@@ -163,7 +165,7 @@ telnet 192.168.1.123 1234
 > tl 4
 ```
 
-**Available Commands**
+**Commands**
 
 | Command | Description | Example |
 | :------ | :---------------------------------------- | :-------- |
