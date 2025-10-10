@@ -14,7 +14,7 @@ use crate::robot::commands::ServoCommand;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Receiver};
 use embassy_time::{Duration, Ticker};
 use esp_hal::{i2c::master::I2c, Async};
-use log::{debug, info};
+use log::debug;
 use pwm_pca9685::Pca9685;
 
 const UPDATE_PERIOD_MS: u64 = 20;
@@ -45,7 +45,6 @@ pub async fn update_position(cmd: &mut ServoCommand, pwm: &mut Pca9685<I2c<'stat
     let mut ticker = Ticker::every(Duration::from_millis(UPDATE_PERIOD_MS));
 
     loop {
-        let now = embassy_time::Instant::now();
         for leg in 0..4 {
             for pos in 0..3 {
                 let diff = (cmd.current_pos[leg][pos] - cmd.expected_pos[leg][pos]).abs();
@@ -67,7 +66,6 @@ pub async fn update_position(cmd: &mut ServoCommand, pwm: &mut Pca9685<I2c<'stat
         if movement_is_done(&cmd) {
             break;
         }
-        info!("tick at: {}", now.as_micros());
 
         ticker.next().await;
     }

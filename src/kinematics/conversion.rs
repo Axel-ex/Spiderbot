@@ -26,10 +26,10 @@ const PRESCALE_REG_SIZE: f32 = 4096.0;
 
 //[femur, tibia, coxa]
 static SERVO_CHANNEL_MAP: [[Channel; 3]; 4] = [
-    [Channel::C0, Channel::C1, Channel::C2],   // front left
-    [Channel::C3, Channel::C4, Channel::C5],   // bottom left
-    [Channel::C6, Channel::C7, Channel::C8],   // front right
-    [Channel::C9, Channel::C10, Channel::C11], // bottom right
+    [Channel::C15, Channel::C14, Channel::C13], // front left
+    [Channel::C12, Channel::C11, Channel::C10], // bottom left
+    [Channel::C0, Channel::C1, Channel::C2],    // front right
+    [Channel::C3, Channel::C4, Channel::C5],    // bottom right
 ];
 
 fn angle_to_ticks(angle: f32) -> u16 {
