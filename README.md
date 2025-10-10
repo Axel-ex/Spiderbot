@@ -1,6 +1,9 @@
 # **ESP32-Rust Quadruped Spider Robot**
 
-*\<p align="center"\>A demo of a similar quadruped robot in action.\</p\>*
+<div align="center">
+  <img src=".assets/demo.jpg" width="60%" alt="Weather Station Demo" />
+</div>
+
 
 This repository contains the firmware for a 3D-printable, Wi-Fi controlled quadruped (spider) robot. The brain of the robot is an ESP32 microcontroller, and the firmware is written entirely in Rust using the embassy asynchronous framework for real-time performance.
 
