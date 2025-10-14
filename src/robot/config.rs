@@ -1,3 +1,9 @@
+//! Physical and movement configuration constants.
+//!
+//! Contains all robot geometry, servo, and gait timing constants, such as leg lengths,
+//! servo pulse ranges, and step durations.
+//!
+//! Used throughout the firmware for calculations and hardware interfacing.
 use micromath::F32Ext;
 
 // ROBOT SIZE

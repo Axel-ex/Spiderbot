@@ -1,7 +1,10 @@
-use crate::{
-    kinematics::gait_engine,
-    robot::{commands::ServoCommand, config::*, leg::Leg},
-};
+//! Gait engine and leg trajectory generation.
+//!
+//! Implements the state machine and algorithms for coordinated leg movement,
+//! including tripod gait sequencing and trajectory interpolation.
+//!
+//! Used by the motion task to generate step patterns and synchronize legs.
+use crate::robot::{commands::ServoCommand, config::*, leg::Leg};
 use core::f32;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Sender, signal::Signal};
 use embassy_time::{with_timeout, Duration};
@@ -79,8 +82,6 @@ impl GaitEngine {
             }
         }
         self.send_cmd().await;
-
-        info!("Spider robot initialized!");
     }
 
     pub async fn calibrate(&mut self) {
@@ -103,8 +104,6 @@ impl GaitEngine {
             Ok(_) => self.current_pos = self.expected_pos,
             Err(_) => error!("[MOTION_TASK] command timed out"),
         }
-
-        debug!("{:?}", self);
     }
 
     pub async fn do_test(&mut self) {
@@ -296,14 +295,13 @@ impl GaitEngine {
         }
     }
 
-    pub async fn turn_left(&mut self, times: i32) {
+    pub async fn turn_left(&mut self, times: u8) {
         let speed = self.config.spot_turn_speed;
 
         for _ in 0..times {
             if self.current_pos[Leg::BottomRight][1] == Y_START {
                 // Leg 3 & 1 move
                 self.set_site(Leg::BottomRight, X_DEFAULT + X_OFFSET, Y_START, Z_UP, speed);
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 self.set_site(
@@ -334,7 +332,6 @@ impl GaitEngine {
                     Z_UP,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 self.set_site(
@@ -344,7 +341,6 @@ impl GaitEngine {
                     Z_DEFAULT,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 self.set_site(
@@ -375,7 +371,6 @@ impl GaitEngine {
                     Z_DEFAULT,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 self.set_site(
@@ -385,7 +380,6 @@ impl GaitEngine {
                     Z_UP,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 self.set_site(
@@ -410,7 +404,6 @@ impl GaitEngine {
                     Z_DEFAULT,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 self.set_site(
@@ -420,12 +413,10 @@ impl GaitEngine {
                     Z_DEFAULT,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
             } else {
                 // Leg 0 & 2 move
                 self.set_site(Leg::FrontLeft, X_DEFAULT + X_OFFSET, Y_START, Z_UP, speed);
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 self.set_site(
@@ -456,7 +447,6 @@ impl GaitEngine {
                     Z_DEFAULT,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 self.set_site(
@@ -466,7 +456,6 @@ impl GaitEngine {
                     Z_DEFAULT,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 self.set_site(
@@ -497,7 +486,6 @@ impl GaitEngine {
                     Z_DEFAULT,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 self.set_site(
@@ -507,7 +495,6 @@ impl GaitEngine {
                     Z_UP,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 self.set_site(
@@ -532,7 +519,6 @@ impl GaitEngine {
                     Z_DEFAULT,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
 
                 self.set_site(
@@ -542,17 +528,16 @@ impl GaitEngine {
                     Z_DEFAULT,
                     speed,
                 );
-                info!("{:?}", self);
                 self.send_cmd().await;
             }
         }
     }
 
-    pub async fn turn_right(&mut self, times: i32) {
+    pub async fn turn_right(&mut self, times: u8) {
         let speed = self.config.spot_turn_speed;
 
         for _ in 0..times {
-            if self.current_pos[Leg::FrontRight as usize][1] == Y_START {
+            if self.current_pos[Leg::FrontRight][1] == Y_START {
                 // Leg 2 (FrontRight) & 0 (FrontLeft) move
                 self.set_site(Leg::FrontRight, X_DEFAULT + X_OFFSET, Y_START, Z_UP, speed);
                 self.send_cmd().await;
@@ -847,6 +832,7 @@ impl GaitEngine {
 
         let length = (length_x.powi(2) + length_y.powi(2) + length_z.powi(2)).sqrt();
 
+        //WARN: division by 0!
         self.temp_speed[leg][0] = length_x / length * move_speed * self.config.speed_multiple;
         self.temp_speed[leg][1] = length_y / length * move_speed * self.config.speed_multiple;
         self.temp_speed[leg][2] = length_z / length * move_speed * self.config.speed_multiple;

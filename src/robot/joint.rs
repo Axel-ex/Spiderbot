@@ -1,13 +1,14 @@
+//! Joint enumeration and display helpers.
+//!
+//! Defines the [`Joint`] enum for identifying each joint (coxa, femur, tibia),
+//! and provides display formatting for debugging and logging.
 use core::fmt::Display;
-use core::ops::{Index, IndexMut};
-
-use super::servo::AnyServo;
 
 #[derive(Debug, Clone, Copy)]
 pub enum Joint {
-    Femur = 0,
+    Coxa = 0,
     Tibia = 1,
-    Coxa = 2,
+    Femur = 2,
 }
 
 impl Display for Joint {
@@ -23,24 +24,10 @@ impl Display for Joint {
 impl From<usize> for Joint {
     fn from(value: usize) -> Self {
         match value {
-            0 => Joint::Femur,
+            0 => Joint::Coxa,
             1 => Joint::Tibia,
-            2 => Joint::Coxa,
-            _ => Joint::Coxa, // default that should not occur
+            2 => Joint::Femur,
+            _ => unreachable!(),
         }
-    }
-}
-
-impl Index<Joint> for [AnyServo; 3] {
-    type Output = AnyServo;
-
-    fn index(&self, joint: Joint) -> &Self::Output {
-        &self[joint as usize]
-    }
-}
-
-impl IndexMut<Joint> for [AnyServo; 3] {
-    fn index_mut(&mut self, joint: Joint) -> &mut Self::Output {
-        &mut self[joint as usize]
     }
 }

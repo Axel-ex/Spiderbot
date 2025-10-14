@@ -1,3 +1,9 @@
+//! Command types for robot control and inter-task communication.
+//!
+//! Defines enums and structs for high-level robot commands (e.g., walking, turning)
+//! and low-level servo commands, as well as TCP command parsing.
+//!
+//! Used by the network, motion, and servo tasks.
 pub enum TcpCommand {
     Calibrate,
     Test,
@@ -5,31 +11,35 @@ pub enum TcpCommand {
     Stand,
     Wave(u8),
     StepForward(u8),
-    TurnLeft(i32),
-    TurnRight(i32),
+    TurnLeft(u8),
+    TurnRight(u8),
     SetAngles([u8; 12]),
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ParseCommandError;
 
-// TODO: Implement the parsing logic
 impl TryFrom<&str> for TcpCommand {
     type Error = ParseCommandError;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let mut tokens = value.trim().split_whitespace();
 
-        match tokens.next() {
-            Some("t") => Ok(TcpCommand::Test),
-            Some("w") => Ok(TcpCommand::Wave(3)),
-            Some("d") => Ok(TcpCommand::StepForward(1)),
-            Some("d5") => Ok(TcpCommand::StepForward(5)),
-            Some("r") => Ok(TcpCommand::Sit),
-            Some("s") => Ok(TcpCommand::Stand),
-            Some("c") => Ok(TcpCommand::Calibrate),
-            Some("tl") => Ok(TcpCommand::TurnLeft(1)),
-            Some("tr") => Ok(TcpCommand::TurnRight(1)),
+        let cmd = tokens.next().ok_or(ParseCommandError)?;
+        let steps = tokens
+            .next()
+            .map(|s| s.parse::<u8>().unwrap_or(1))
+            .unwrap_or(1);
+
+        match cmd {
+            "t" => Ok(TcpCommand::Test),
+            "w" => Ok(TcpCommand::Wave(steps)),
+            "d" => Ok(TcpCommand::StepForward(steps)),
+            "r" => Ok(TcpCommand::Sit),
+            "s" => Ok(TcpCommand::Stand),
+            "c" => Ok(TcpCommand::Calibrate),
+            "tl" => Ok(TcpCommand::TurnLeft(steps)),
+            "tr" => Ok(TcpCommand::TurnRight(steps)),
             _ => Err(ParseCommandError),
         }
     }

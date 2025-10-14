@@ -1,3 +1,9 @@
+//! Networking and TCP command server task.
+//!
+//! Manages WiFi connection, listens for TCP commands, parses them, and forwards
+//! them to the motion task for execution.
+//!
+//! Handles network errors and reconnection logic.
 extern crate alloc;
 
 use crate::robot::commands::TcpCommand;
@@ -5,11 +11,13 @@ use alloc::string::String;
 use core::str::FromStr;
 use embassy_net::{tcp::TcpSocket, IpListenEndpoint, Stack};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Sender};
-use embassy_time::{Duration, Timer};
+use embassy_time::Timer;
 use esp_wifi::wifi::{ClientConfiguration, WifiController, WifiDevice};
-use log::{error, info};
+use log::{debug, error, info, warn};
 
-/// Keeps the net stack up. (processes network events)
+const PORT: u16 = 1234;
+const RX_BUF_SIZE: usize = 128;
+
 #[embassy_executor::task]
 pub async fn runner_task(mut runner: embassy_net::Runner<'static, WifiDevice<'static>>) {
     runner.run().await;
@@ -20,24 +28,32 @@ pub async fn tcp_server(
     stack: Stack<'static>,
     cmd_sender: Sender<'static, CriticalSectionRawMutex, TcpCommand, 3>,
 ) {
-    let mut rx_buf = [0u8; 512];
-    let mut tx_buf = [0u8; 512];
+    let mut rx_buf = [0u8; 128];
+    let mut tx_buf = [0u8; 128];
+
+    while !stack.is_link_up() {
+        Timer::after_millis(500).await;
+    }
+
+    if let Some(config) = stack.config_v4() {
+        info!(
+            "TCP server listening at address {}:{}",
+            config.address, PORT
+        );
+    }
 
     loop {
-        // Create NEW socket for each connection
         let mut socket = TcpSocket::new(stack, &mut rx_buf, &mut tx_buf);
-        socket.set_timeout(Some(Duration::from_secs(2)));
 
-        info!("Waiting for connection...");
         match socket
             .accept(IpListenEndpoint {
-                port: 1234,
+                port: PORT,
                 addr: None,
             })
             .await
         {
             Ok(_) => {
-                info!("Client connected!");
+                debug!("Client connected!");
                 handle_connection(&mut socket, &cmd_sender).await;
             }
             Err(e) => {
@@ -53,15 +69,18 @@ pub async fn handle_connection(
     socket: &mut TcpSocket<'_>,
     cmd_sender: &Sender<'static, CriticalSectionRawMutex, TcpCommand, 3>,
 ) {
-    let mut buf = [0u8; 256];
+    let mut rx_buf = [0u8; RX_BUF_SIZE];
     loop {
-        match socket.read(&mut buf).await {
+        match socket.read(&mut rx_buf).await {
             Ok(0) => break,
             Ok(n) => {
-                if let Ok(cmd) = TcpCommand::try_from(core::str::from_utf8(&buf[..n]).unwrap()) {
+                let received_str = core::str::from_utf8(&rx_buf[..n]).unwrap().trim();
+                if let Ok(cmd) = TcpCommand::try_from(received_str) {
                     cmd_sender.send(cmd).await;
-                };
-                break; // Close after first command
+                } else {
+                    warn!("Unrecognised command: {}", received_str);
+                }
+                break; // Close socket after first command
             }
             Err(e) => {
                 error!("Read error: {:?}", e);
@@ -96,8 +115,7 @@ pub async fn configurate_and_start_wifi(wifi_controller: &mut WifiController<'_>
         .inspect_err(|e| error!("An error occured trying to connect to wifi: {e:?}"))
         .unwrap();
 
-    match wifi_controller.rssi().ok() {
-        Some(rssi) => info!("Wifi connected! signal: {}", rssi),
-        None => info!("Wifi connected!"),
+    if let Ok(rssi) = wifi_controller.rssi() {
+        info!("Wifi connected! signal: {}", rssi)
     }
 }

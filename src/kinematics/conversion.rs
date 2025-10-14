@@ -1,11 +1,71 @@
+//! Inverse kinematics and servo pulse conversion.
+//!
+//! Provides functions to convert between Cartesian coordinates and joint angles
+//! for each leg, as well as mapping joint angles to servo pulse widths.
+//!
+//! Used by the gait engine (held by the motion task) to plan and execute leg movements.
 use core::f32::consts::PI;
 use micromath::F32Ext;
 
 use crate::robot::{
     config::{LENGTH_A, LENGTH_B, LENGTH_C},
+    joint::Joint,
     leg::Leg,
-    servo::AnyServo,
 };
+use esp_hal::{i2c::master::I2c, Async};
+use log::error;
+use pwm_pca9685::{Channel, Pca9685};
+
+// --- Servo Configuration ---
+const SERVO_MIN_PULSE_US: f32 = 544.0;
+const SERVO_MAX_PULSE_US: f32 = 2400.0;
+const SERVO_ANGLE_RANGE: f32 = 180.0;
+const PCA_FREQUENCY_HZ: u32 = 50;
+const PCA_PERIOD_US: f32 = 1_000_000.0 / PCA_FREQUENCY_HZ as f32; // 20000 µs
+
+//[coxa, tibia, femur]
+static SERVO_CHANNEL_MAP: [[Channel; 3]; 4] = [
+    [Channel::C0, Channel::C1, Channel::C2],   // front right
+    [Channel::C3, Channel::C4, Channel::C5],   // bottom left
+    [Channel::C6, Channel::C7, Channel::C8],   // front left
+    [Channel::C9, Channel::C10, Channel::C11], // bottom right
+];
+
+fn angle_to_ticks(angle: f32) -> u16 {
+    let pulse_width_range = SERVO_MAX_PULSE_US - SERVO_MIN_PULSE_US;
+    let pulse_us = SERVO_MIN_PULSE_US + (angle / SERVO_ANGLE_RANGE) * pulse_width_range;
+    let tick = (pulse_us / PCA_PERIOD_US) * 4096.0;
+    // Clamp the value to the valid PCA9685 range
+    tick.round().clamp(0.0, 4095.0) as u16
+}
+
+pub async fn set_leg_angles(
+    pwm: &mut Pca9685<I2c<'static, Async>>,
+    leg: Leg,
+    alpha: f32,
+    beta: f32,
+    gamma: f32,
+) {
+    let coxa_tick = angle_to_ticks(alpha);
+    let tibia_tick = angle_to_ticks(beta);
+    let femur_tick = angle_to_ticks(gamma); // Coxa should be gamme (coxa and femur
+                                            // inverted)
+
+    let channels = SERVO_CHANNEL_MAP[leg as usize];
+    if let Err(e) = pwm
+        .set_channel_on_off(channels[Joint::Coxa as usize], 0, coxa_tick) //coxa
+        //as usize should evaluate to 2
+        .await
+    {
+        error!("{e}");
+    }
+    if let Err(e) = pwm.set_channel_on_off(channels[1], 0, tibia_tick).await {
+        error!("{e}");
+    }
+    if let Err(e) = pwm.set_channel_on_off(channels[2], 0, femur_tick).await {
+        error!("{e}");
+    }
+}
 
 /// transform in place alpha beta and gamma using mathematical model
 pub fn cartesian_to_polar(x: f32, y: f32, z: f32) -> (f32, f32, f32) {
@@ -35,8 +95,8 @@ pub fn cartesian_to_polar(x: f32, y: f32, z: f32) -> (f32, f32, f32) {
     (alpha, beta, gamma)
 }
 
-pub fn polar_to_servo(
-    servos: &mut [[AnyServo; 3]; 4],
+pub async fn polar_to_servo(
+    pwm: &mut Pca9685<I2c<'static, Async>>,
     leg: Leg,
     mut alpha: f32,
     mut beta: f32,
@@ -65,12 +125,5 @@ pub fn polar_to_servo(
         }
     }
 
-    servos[leg][0].set_angle(f32_to_u8(alpha));
-    servos[leg][1].set_angle(f32_to_u8(beta));
-    servos[leg][2].set_angle(f32_to_u8(gamma));
-}
-
-// Utility: Convert f32 to u8 safely
-fn f32_to_u8(value: f32) -> u8 {
-    value.round().clamp(0.0, 180.0) as u8
+    set_leg_angles(pwm, leg, alpha, beta, gamma).await;
 }

@@ -1,3 +1,9 @@
+//! High-level motion task for Spiderbot.
+//!
+//! Receives movement commands, computes gait steps, and coordinates leg positions
+//! using the gait engine and kinematics modules.
+//!
+//! Communicates with the servo task to execute planned movements.
 use crate::kinematics::gait_engine::GaitEngine;
 use crate::robot::commands::{ServoCommand, TcpCommand};
 use embassy_sync::{
@@ -7,16 +13,17 @@ use embassy_sync::{
 use embassy_time::{Duration, Ticker};
 use log::{debug, info};
 
+const UPDATE_PERIOD_MS: u64 = 20;
+
 #[embassy_executor::task]
 pub async fn motion_task(
     tcp_cmd_receiver: Receiver<'static, CriticalSectionRawMutex, TcpCommand, 3>,
     servo_cmd_sender: Sender<'static, CriticalSectionRawMutex, ServoCommand, 3>,
 ) {
-    let mut ticker = Ticker::every(Duration::from_millis(20));
+    let mut ticker = Ticker::every(Duration::from_millis(UPDATE_PERIOD_MS));
     let mut gait = GaitEngine::new(servo_cmd_sender);
-    gait.init_positions().await;
-    debug!("Gait engine inited!\n {gait:?}");
-    info!("{:?}", gait.config());
+    // gait.init_positions().await;
+    debug!("{:?}", gait.config());
 
     loop {
         info!("[MOTION_TASK] listening for command...");
@@ -35,7 +42,7 @@ pub async fn motion_task(
                 gait.step_forward(n).await;
             }
             TcpCommand::Wave(n) => {
-                info!("{stamp} wave command");
+                info!("{stamp} wave {n}");
                 gait.wave(n).await;
             }
             TcpCommand::Sit => {
@@ -56,8 +63,6 @@ pub async fn motion_task(
             }
             _ => info!("{stamp} unknown command"),
         }
-        debug!("Gait engine state:\n {gait:?}");
-
         ticker.next().await;
     }
 }
