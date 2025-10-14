@@ -27,13 +27,15 @@ The project draws heavy inspiration from the [DIY Spider Robot](https://www.inst
 
 ## Introduction
 
-This project aims to provide an accessible yet advanced robotic platform. By combining the Wi-Fi-enabled ESP32 with the safety and concurrency guarantees of Rust, the robot can execute complex movements while remaining resilient to runtime errors. The quadruped has 12 degrees of freedom (three per leg) and uses inverse kinematics to calculate the joint angles required to position its feet in 3D space.
+This project aims to provide an accessible robotic project to do your first steps with embedded rust. By combining the Wi-Fi-enabled ESP32 with the safety and concurrency guarantees of Rust, the robot can execute complex movements. The quadruped has 12 degrees of freedom (three per leg) and uses inverse kinematics to calculate the joint angles required to position its feet in 3D space. Remote control is handled over Wi-Fi through a lightweight TCP server running on the ESP32, allowing you to send commands from any computer on the same network.
+This project is made for tinkerers, 3d printing and electronics enthusiast. The project is still in development and any suggestion for improvment is really welcome! see [Contributing](#contributing)
 
-Remote control is handled over Wi-Fi through a lightweight TCP server running on the ESP32, allowing you to send commands from any computer on the same network.
 
 ## Hardware
 
 ### Bill of Materials
+
+DISCLAIMER - The bot is not complete and in the future will be designed to run on battery which implies adding battery management system (BMS), capacitors, circuit protection features... Hence this list might change.
 
 | Component | Quantity | Notes |
 | :---- | :---- | :---- |
@@ -191,4 +193,4 @@ telnet 192.168.1.123 1234
 
 ## Contributing
 
-Pull requests are welcome! If you plan a significant change, please open an issue first to discuss what you would like to improve. Contributions that add new gaits, improve documentation, or expand hardware support are especially appreciated.
+Pull requests are welcome! If you plan a significant change, please open an issue first to discuss what you would like to improve. Contributions that add new gaits, improve documentation, or expand hardware support are especially appreciated. Also if you have any questions your are welcome to publish them in issues!
