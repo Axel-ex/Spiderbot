@@ -6,14 +6,11 @@
 //! Handles servo timing and error reporting.
 extern crate alloc;
 
-use crate::robot::commands::ServoCommand;
-use crate::{
-    kinematics::{
-        conversion::{cartesian_to_polar, polar_to_servo, set_leg_angles},
-        gait_engine::MOVEMENT_COMPLETED,
-    },
-    robot::leg::Leg,
+use crate::kinematics::{
+    conversion::{cartesian_to_polar, polar_to_servo},
+    gait_engine::MOVEMENT_COMPLETED,
 };
+use crate::robot::commands::ServoCommand;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Receiver};
 use embassy_time::{Duration, Ticker};
 use esp_hal::{i2c::master::I2c, Async};
@@ -31,31 +28,32 @@ pub async fn servo_task(
         .await
         .expect("Fail configurating pca driver"); //prescale=(25,000,000 / 4096×50) −1
     pwm.enable().await.expect("Fail enabling the pca driver");
+    let mut ticker = Ticker::every(Duration::from_millis(UPDATE_PERIOD_MS));
 
-    set_leg_angles(&mut pwm, Leg::FrontRight, 90.0, 45.0, 70.0).await;
-    set_leg_angles(&mut pwm, Leg::BottomLeft, 90.0, 45.0, 70.0).await;
-    set_leg_angles(&mut pwm, Leg::BottomRight, 90.0, 45.0, 70.0).await;
-
+    let mut cmd = receiver.receive().await;
     loop {
-        let cmd = receiver.receive().await;
+        update_position(&mut cmd, &mut pwm).await;
+        if let Ok(new_cmd) = receiver.try_receive() {
+            cmd = new_cmd;
+        }
         debug!("[SERVO_TASK] Received a command!");
-        update_position(cmd, &mut pwm).await;
+        ticker.next().await;
     }
 }
 
-pub async fn update_position(mut cmd: ServoCommand, pwm: &mut Pca9685<I2c<'static, Async>>) {
+pub async fn update_position(cmd: &mut ServoCommand, pwm: &mut Pca9685<I2c<'static, Async>>) {
     let mut ticker = Ticker::every(Duration::from_millis(UPDATE_PERIOD_MS));
 
     loop {
         for leg in 0..4 {
-            for joint in 0..3 {
-                let diff = (cmd.current_pos[leg][joint] - cmd.expected_pos[leg][joint]).abs();
-                let speed = cmd.temp_speed[leg][joint].abs();
+            for pos in 0..3 {
+                let diff = (cmd.current_pos[leg][pos] - cmd.expected_pos[leg][pos]).abs();
+                let speed = cmd.temp_speed[leg][pos].abs();
 
                 if diff >= speed {
-                    cmd.current_pos[leg][joint] += cmd.temp_speed[leg][joint];
+                    cmd.current_pos[leg][pos] += cmd.temp_speed[leg][pos];
                 } else {
-                    cmd.current_pos[leg][joint] = cmd.expected_pos[leg][joint];
+                    cmd.current_pos[leg][pos] = cmd.expected_pos[leg][pos];
                 }
             }
             let (alpha, beta, gamma) = cartesian_to_polar(
@@ -68,6 +66,7 @@ pub async fn update_position(mut cmd: ServoCommand, pwm: &mut Pca9685<I2c<'stati
         if movement_is_done(&cmd) {
             break;
         }
+
         ticker.next().await;
     }
     MOVEMENT_COMPLETED.signal(());

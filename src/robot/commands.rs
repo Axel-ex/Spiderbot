@@ -5,12 +5,13 @@
 //!
 //! Used by the network, motion, and servo tasks.
 pub enum TcpCommand {
-    Calibrate,
+    CloseConnection,
     Test,
     Sit,
     Stand,
     Wave(u8),
     StepForward(u8),
+    StepBackward(u8),
     TurnLeft(u8),
     TurnRight(u8),
     SetAngles([u8; 12]),
@@ -32,12 +33,13 @@ impl TryFrom<&str> for TcpCommand {
             .unwrap_or(1);
 
         match cmd {
-            "t" => Ok(TcpCommand::Test),
+            "close" => Ok(TcpCommand::CloseConnection),
+            "test" => Ok(TcpCommand::Test),
             "w" => Ok(TcpCommand::Wave(steps)),
-            "d" => Ok(TcpCommand::StepForward(steps)),
-            "r" => Ok(TcpCommand::Sit),
-            "s" => Ok(TcpCommand::Stand),
-            "c" => Ok(TcpCommand::Calibrate),
+            "sf" => Ok(TcpCommand::StepForward(steps)),
+            "sb" => Ok(TcpCommand::StepBackward(steps)),
+            "sit" => Ok(TcpCommand::Sit),
+            "stand" => Ok(TcpCommand::Stand),
             "tl" => Ok(TcpCommand::TurnLeft(steps)),
             "tr" => Ok(TcpCommand::TurnRight(steps)),
             _ => Err(ParseCommandError),

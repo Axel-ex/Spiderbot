@@ -22,47 +22,52 @@ const SERVO_MAX_PULSE_US: f32 = 2400.0;
 const SERVO_ANGLE_RANGE: f32 = 180.0;
 const PCA_FREQUENCY_HZ: u32 = 50;
 const PCA_PERIOD_US: f32 = 1_000_000.0 / PCA_FREQUENCY_HZ as f32; // 20000 µs
+const PRESCALE_REG_SIZE: f32 = 4096.0;
 
-//[coxa, tibia, femur]
+//[femur, tibia, coxa]
 static SERVO_CHANNEL_MAP: [[Channel; 3]; 4] = [
-    [Channel::C0, Channel::C1, Channel::C2],   // front right
-    [Channel::C3, Channel::C4, Channel::C5],   // bottom left
-    [Channel::C6, Channel::C7, Channel::C8],   // front left
-    [Channel::C9, Channel::C10, Channel::C11], // bottom right
+    [Channel::C15, Channel::C14, Channel::C13], // front left
+    [Channel::C12, Channel::C11, Channel::C10], // bottom left
+    [Channel::C0, Channel::C1, Channel::C2],    // front right
+    [Channel::C3, Channel::C4, Channel::C5],    // bottom right
 ];
 
 fn angle_to_ticks(angle: f32) -> u16 {
     let pulse_width_range = SERVO_MAX_PULSE_US - SERVO_MIN_PULSE_US;
     let pulse_us = SERVO_MIN_PULSE_US + (angle / SERVO_ANGLE_RANGE) * pulse_width_range;
-    let tick = (pulse_us / PCA_PERIOD_US) * 4096.0;
+    let tick = (pulse_us / PCA_PERIOD_US) * PRESCALE_REG_SIZE;
     // Clamp the value to the valid PCA9685 range
-    tick.round().clamp(0.0, 4095.0) as u16
+    tick.round().clamp(0.0, PRESCALE_REG_SIZE - 1.0) as u16
 }
 
-pub async fn set_leg_angles(
+async fn set_leg_angles(
     pwm: &mut Pca9685<I2c<'static, Async>>,
     leg: Leg,
     alpha: f32,
     beta: f32,
     gamma: f32,
 ) {
-    let coxa_tick = angle_to_ticks(alpha);
+    let femur_tick = angle_to_ticks(alpha);
     let tibia_tick = angle_to_ticks(beta);
-    let femur_tick = angle_to_ticks(gamma); // Coxa should be gamme (coxa and femur
-                                            // inverted)
+    let coxa_tick = angle_to_ticks(gamma);
 
     let channels = SERVO_CHANNEL_MAP[leg as usize];
     if let Err(e) = pwm
-        .set_channel_on_off(channels[Joint::Coxa as usize], 0, coxa_tick) //coxa
-        //as usize should evaluate to 2
+        .set_channel_on_off(channels[Joint::Femur as usize], 0, femur_tick)
         .await
     {
         error!("{e}");
     }
-    if let Err(e) = pwm.set_channel_on_off(channels[1], 0, tibia_tick).await {
+    if let Err(e) = pwm
+        .set_channel_on_off(channels[Joint::Tibia as usize], 0, tibia_tick)
+        .await
+    {
         error!("{e}");
     }
-    if let Err(e) = pwm.set_channel_on_off(channels[2], 0, femur_tick).await {
+    if let Err(e) = pwm
+        .set_channel_on_off(channels[Joint::Coxa as usize], 0, coxa_tick)
+        .await
+    {
         error!("{e}");
     }
 }

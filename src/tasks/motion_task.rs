@@ -10,19 +10,15 @@ use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex,
     channel::{Receiver, Sender},
 };
-use embassy_time::{Duration, Ticker};
 use log::{debug, info};
-
-const UPDATE_PERIOD_MS: u64 = 20;
 
 #[embassy_executor::task]
 pub async fn motion_task(
     tcp_cmd_receiver: Receiver<'static, CriticalSectionRawMutex, TcpCommand, 3>,
     servo_cmd_sender: Sender<'static, CriticalSectionRawMutex, ServoCommand, 3>,
 ) {
-    let mut ticker = Ticker::every(Duration::from_millis(UPDATE_PERIOD_MS));
     let mut gait = GaitEngine::new(servo_cmd_sender);
-    // gait.init_positions().await;
+    gait.init_positions().await;
     debug!("{:?}", gait.config());
 
     loop {
@@ -33,13 +29,16 @@ pub async fn motion_task(
                 info!("{stamp} test");
                 gait.do_test().await;
             }
-            TcpCommand::Calibrate => {
-                info!("{stamp} calibrate");
-                gait.calibrate().await;
+            TcpCommand::CloseConnection => {
+                info!("{stamp} close connection");
             }
             TcpCommand::StepForward(n) => {
                 info!("{stamp} step forward {n}");
                 gait.step_forward(n).await;
+            }
+            TcpCommand::StepBackward(n) => {
+                info!("{stamp} step backward {n}");
+                gait.step_backward(n).await;
             }
             TcpCommand::Wave(n) => {
                 info!("{stamp} wave {n}");
@@ -63,6 +62,5 @@ pub async fn motion_task(
             }
             _ => info!("{stamp} unknown command"),
         }
-        ticker.next().await;
     }
 }
