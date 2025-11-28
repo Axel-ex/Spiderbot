@@ -13,7 +13,7 @@ The project was entirely inspired from [DIY Spider Robot](https://www.instructab
 1. [Introduction](#introduction)
 2. [Hardware](#hardware)
    1. [Bill of Materials](#bill-of-materials)
-   2. [Wiring Diagram](#wiring-diagram)
+   2. [Wiring](#wiring)
 3. [Software Design](#software-design)
    1. [Architecture Overview](#architecture-overview)
    2. [Why a PCA9685 Servo Driver?](#why-a-pca9685-servo-driver)
