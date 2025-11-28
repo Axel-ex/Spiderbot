@@ -90,15 +90,6 @@ impl GaitEngine {
         self.send_cmd().await;
     }
 
-    pub async fn calibrate(&mut self) {
-        let speed = self.config.move_speed;
-        self.set_site(Leg::FrontLeft, 0.0, 0.0, 0.0, speed);
-        self.set_site(Leg::BottomLeft, 0.0, 0.0, 0.0, speed);
-        self.set_site(Leg::FrontRight, 0.0, 0.0, 0.0, speed);
-        self.set_site(Leg::BottomRight, 0.0, 0.0, 0.0, speed);
-        self.send_cmd().await;
-    }
-
     /// Send the internal state of the gait engine to the servo task and update position (it
     /// assumes the command always succeed) //TODO: should it fail? watchdog? clean state?
     pub async fn send_cmd(&mut self) {
