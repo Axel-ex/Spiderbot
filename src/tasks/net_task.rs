@@ -7,13 +7,14 @@
 extern crate alloc;
 
 use crate::robot::commands::TcpCommand;
+use crate::TCPCMD_CHANNEL_SIZE;
 use alloc::string::String;
 use core::str::FromStr;
 use embassy_net::{tcp::TcpSocket, IpListenEndpoint, Stack};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Sender};
 use embassy_time::Timer;
 use esp_wifi::wifi::{ClientConfiguration, WifiController, WifiDevice};
-use log::{debug, error, info, warn};
+use log::{error, info, warn};
 
 const PORT: u16 = 1234;
 const RX_BUF_SIZE: usize = 128;
@@ -25,9 +26,9 @@ pub async fn runner_task(mut runner: embassy_net::Runner<'static, WifiDevice<'st
 }
 
 #[embassy_executor::task]
-pub async fn tcp_server(
+pub async fn net_task(
     stack: Stack<'static>,
-    cmd_sender: Sender<'static, CriticalSectionRawMutex, TcpCommand, 3>,
+    cmd_sender: Sender<'static, CriticalSectionRawMutex, TcpCommand, TCPCMD_CHANNEL_SIZE>,
 ) {
     let mut rx_buf = [0u8; RX_BUF_SIZE];
     let mut tx_buf = [0u8; TX_BUF_SIZE];
@@ -54,7 +55,7 @@ pub async fn tcp_server(
             .await
         {
             Ok(_) => {
-                debug!("Client connected!");
+                info!("Client connected!");
                 handle_connection(&mut socket, &cmd_sender).await;
             }
             Err(e) => {
@@ -68,14 +69,16 @@ pub async fn tcp_server(
 
 pub async fn handle_connection(
     socket: &mut TcpSocket<'_>,
-    cmd_sender: &Sender<'static, CriticalSectionRawMutex, TcpCommand, 3>,
+    cmd_sender: &Sender<'static, CriticalSectionRawMutex, TcpCommand, TCPCMD_CHANNEL_SIZE>,
 ) {
     let mut rx_buf = [0u8; RX_BUF_SIZE];
     loop {
         match socket.read(&mut rx_buf).await {
             Ok(0) => break,
             Ok(n) => {
-                let received_str = core::str::from_utf8(&rx_buf[..n]).unwrap().trim();
+                let received_str = core::str::from_utf8(&rx_buf[..n])
+                    .unwrap_or_default()
+                    .trim();
                 if let Ok(cmd) = TcpCommand::try_from(received_str) {
                     match cmd {
                         TcpCommand::CloseConnection => break, // special case

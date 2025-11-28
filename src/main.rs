@@ -26,13 +26,16 @@ use esp_hal::timer::timg::TimerGroup;
 use pwm_pca9685::Pca9685;
 use spider_robot::robot::commands::{ServoCommand, TcpCommand};
 use spider_robot::tasks::motion_task::motion_task;
-use spider_robot::tasks::net_task::{configurate_and_start_wifi, runner_task, tcp_server};
+use spider_robot::tasks::net_task::{configurate_and_start_wifi, net_task, runner_task};
 use spider_robot::tasks::servo_task::servo_task;
+use spider_robot::{SERVOCMD_CHANNEL_SIZE, TCPCMD_CHANNEL_SIZE};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
-static TCP_CMD_CHANNEL: Channel<CriticalSectionRawMutex, TcpCommand, 3> = Channel::new();
-static SERVO_CMD_CHANNEL: Channel<CriticalSectionRawMutex, ServoCommand, 3> = Channel::new();
+static TCP_CMD_CHANNEL: Channel<CriticalSectionRawMutex, TcpCommand, TCPCMD_CHANNEL_SIZE> =
+    Channel::new();
+static SERVO_CMD_CHANNEL: Channel<CriticalSectionRawMutex, ServoCommand, SERVOCMD_CHANNEL_SIZE> =
+    Channel::new();
 
 macro_rules! mk_static {
     ($t:ty, $val:expr) => {{
@@ -90,7 +93,7 @@ async fn main(spawner: Spawner) {
         .spawn(runner_task(runner))
         .expect("Fail spawning runner task");
     spawner
-        .spawn(tcp_server(stack, TCP_CMD_CHANNEL.sender()))
+        .spawn(net_task(stack, TCP_CMD_CHANNEL.sender()))
         .expect("Fail spawning net task");
     spawner
         .spawn(motion_task(

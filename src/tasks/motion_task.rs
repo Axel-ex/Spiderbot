@@ -6,6 +6,7 @@
 //! Communicates with the servo task to execute planned movements.
 use crate::kinematics::gait_engine::GaitEngine;
 use crate::robot::commands::{ServoCommand, TcpCommand};
+use crate::{SERVOCMD_CHANNEL_SIZE, TCPCMD_CHANNEL_SIZE};
 use embassy_sync::{
     blocking_mutex::raw::CriticalSectionRawMutex,
     channel::{Receiver, Sender},
@@ -14,15 +15,14 @@ use log::{debug, info};
 
 #[embassy_executor::task]
 pub async fn motion_task(
-    tcp_cmd_receiver: Receiver<'static, CriticalSectionRawMutex, TcpCommand, 3>,
-    servo_cmd_sender: Sender<'static, CriticalSectionRawMutex, ServoCommand, 3>,
+    tcp_cmd_receiver: Receiver<'static, CriticalSectionRawMutex, TcpCommand, TCPCMD_CHANNEL_SIZE>,
+    servo_cmd_sender: Sender<'static, CriticalSectionRawMutex, ServoCommand, SERVOCMD_CHANNEL_SIZE>,
 ) {
     let mut gait = GaitEngine::new(servo_cmd_sender);
     gait.init_positions().await;
     debug!("{:?}", gait.config());
 
     loop {
-        info!("[MOTION_TASK] listening for command...");
         let stamp = "[MOTION_TASK] received";
         match tcp_cmd_receiver.receive().await {
             TcpCommand::Test => {

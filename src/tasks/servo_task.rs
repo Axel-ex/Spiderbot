@@ -11,6 +11,7 @@ use crate::kinematics::{
     gait_engine::MOVEMENT_COMPLETED,
 };
 use crate::robot::commands::ServoCommand;
+use crate::SERVOCMD_CHANNEL_SIZE;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Receiver};
 use embassy_time::{Duration, Ticker};
 use esp_hal::{i2c::master::I2c, Async};
@@ -22,7 +23,7 @@ const UPDATE_PERIOD_MS: u64 = 20;
 #[embassy_executor::task]
 pub async fn servo_task(
     mut pwm: Pca9685<I2c<'static, Async>>,
-    receiver: Receiver<'static, CriticalSectionRawMutex, ServoCommand, 3>,
+    receiver: Receiver<'static, CriticalSectionRawMutex, ServoCommand, SERVOCMD_CHANNEL_SIZE>,
 ) {
     pwm.set_prescale(121)
         .await
