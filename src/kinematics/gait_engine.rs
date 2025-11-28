@@ -5,6 +5,7 @@
 //!
 //! Used by the motion task to generate step patterns and synchronize legs.
 use crate::robot::{commands::ServoCommand, config::*, leg::Leg};
+use crate::SERVOCMD_CHANNEL_SIZE;
 use core::f32;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Sender, signal::Signal};
 use embassy_time::{with_timeout, Duration};
@@ -19,12 +20,17 @@ pub struct GaitEngine {
     expected_pos: [[f32; 3]; 4], // expected coordinates
     temp_speed: [[f32; 3]; 4],  // Speed to reach expected pos.
     config: RobotConfig,
-    servo_cmd_sender: Sender<'static, CriticalSectionRawMutex, ServoCommand, 3>, //channel for ServoCommand
+    servo_cmd_sender: Sender<'static, CriticalSectionRawMutex, ServoCommand, SERVOCMD_CHANNEL_SIZE>, //channel for ServoCommand
 }
 
 impl GaitEngine {
     pub fn new(
-        servo_cmd_sender: Sender<'static, CriticalSectionRawMutex, ServoCommand, 3>,
+        servo_cmd_sender: Sender<
+            'static,
+            CriticalSectionRawMutex,
+            ServoCommand,
+            SERVOCMD_CHANNEL_SIZE,
+        >,
     ) -> Self {
         let current_pos = [[0.0; 3]; 4];
         let expected_pos = [[0.0; 3]; 4];

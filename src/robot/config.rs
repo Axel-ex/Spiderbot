@@ -27,7 +27,7 @@ pub const KEEP: f32 = 255.0;
 
 /// Stores the constant that need runtime op like sqrt or cos and variable that will be dynamically
 /// use by the program like the speeds
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct RobotConfig {
     pub temp_a: f32,
     pub temp_b: f32,

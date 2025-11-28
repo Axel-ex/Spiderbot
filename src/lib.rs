@@ -7,3 +7,6 @@
 pub mod kinematics;
 pub mod robot;
 pub mod tasks;
+
+pub const SERVOCMD_CHANNEL_SIZE: usize = 4;
+pub const TCPCMD_CHANNEL_SIZE: usize = 4;
