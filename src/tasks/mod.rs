@@ -6,6 +6,6 @@
 //! - [`net_task`]: Manages WiFi, TCP server, and command reception.
 //!
 //! Tasks are spawned from `main.rs` and communicate via Embassy channels.
-pub mod motion_task;
+pub mod gait_task;
 pub mod net_task;
 pub mod servo_task;

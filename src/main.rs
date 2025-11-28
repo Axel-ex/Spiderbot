@@ -14,6 +14,17 @@
 
 extern crate alloc;
 
+pub mod config;
+pub mod kinematics;
+pub mod robot;
+pub mod tasks;
+
+use crate::config::{SERVOCMD_CHANNEL_SIZE, TCPCMD_CHANNEL_SIZE};
+use crate::robot::commands::{ServoCommand, TcpCommand};
+use crate::tasks::gait_task::gait_task;
+use crate::tasks::net_task::{configurate_and_start_wifi, net_task, runner_task};
+use crate::tasks::servo_task::servo_task;
+
 use core::future::pending;
 use embassy_executor::Spawner;
 use embassy_net::{Config as NetConfig, StackResources};
@@ -24,11 +35,6 @@ use esp_hal::clock::CpuClock;
 use esp_hal::i2c::master::{Config, I2c};
 use esp_hal::timer::timg::TimerGroup;
 use pwm_pca9685::Pca9685;
-use spider_robot::robot::commands::{ServoCommand, TcpCommand};
-use spider_robot::tasks::motion_task::motion_task;
-use spider_robot::tasks::net_task::{configurate_and_start_wifi, net_task, runner_task};
-use spider_robot::tasks::servo_task::servo_task;
-use spider_robot::{SERVOCMD_CHANNEL_SIZE, TCPCMD_CHANNEL_SIZE};
 
 esp_bootloader_esp_idf::esp_app_desc!();
 
@@ -96,7 +102,7 @@ async fn main(spawner: Spawner) {
         .spawn(net_task(stack, TCP_CMD_CHANNEL.sender()))
         .expect("Fail spawning net task");
     spawner
-        .spawn(motion_task(
+        .spawn(gait_task(
             TCP_CMD_CHANNEL.receiver(),
             SERVO_CMD_CHANNEL.sender(),
         ))

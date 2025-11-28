@@ -7,30 +7,11 @@
 use core::f32::consts::PI;
 use micromath::F32Ext;
 
-use crate::robot::{
-    config::{LENGTH_A, LENGTH_B, LENGTH_C},
-    joint::Joint,
-    leg::Leg,
-};
+use crate::config::*;
+use crate::robot::{joint::Joint, leg::Leg};
 use esp_hal::{i2c::master::I2c, Async};
 use log::error;
-use pwm_pca9685::{Channel, Pca9685};
-
-// --- Servo Configuration ---
-const SERVO_MIN_PULSE_US: f32 = 544.0;
-const SERVO_MAX_PULSE_US: f32 = 2400.0;
-const SERVO_ANGLE_RANGE: f32 = 180.0;
-const PCA_FREQUENCY_HZ: u32 = 50;
-const PCA_PERIOD_US: f32 = 1_000_000.0 / PCA_FREQUENCY_HZ as f32; // 20000 µs
-const PRESCALE_REG_SIZE: f32 = 4096.0;
-
-//[femur, tibia, coxa]
-static SERVO_CHANNEL_MAP: [[Channel; 3]; 4] = [
-    [Channel::C15, Channel::C14, Channel::C13], // front left
-    [Channel::C12, Channel::C11, Channel::C10], // bottom left
-    [Channel::C0, Channel::C1, Channel::C2],    // front right
-    [Channel::C3, Channel::C4, Channel::C5],    // bottom right
-];
+use pwm_pca9685::Pca9685;
 
 fn angle_to_ticks(angle: f32) -> u16 {
     let pulse_width_range = SERVO_MAX_PULSE_US - SERVO_MIN_PULSE_US;

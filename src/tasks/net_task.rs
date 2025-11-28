@@ -6,8 +6,9 @@
 //! Handles network errors and reconnection logic.
 extern crate alloc;
 
+use crate::config::TCPCMD_CHANNEL_SIZE;
+use crate::config::{PORT, RX_BUF_SIZE, TX_BUF_SIZE};
 use crate::robot::commands::TcpCommand;
-use crate::TCPCMD_CHANNEL_SIZE;
 use alloc::string::String;
 use core::str::FromStr;
 use embassy_net::{tcp::TcpSocket, IpListenEndpoint, Stack};
@@ -15,10 +16,6 @@ use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Sender
 use embassy_time::Timer;
 use esp_wifi::wifi::{ClientConfiguration, WifiController, WifiDevice};
 use log::{error, info, warn};
-
-const PORT: u16 = 1234;
-const RX_BUF_SIZE: usize = 128;
-const TX_BUF_SIZE: usize = 128;
 
 #[embassy_executor::task]
 pub async fn runner_task(mut runner: embassy_net::Runner<'static, WifiDevice<'static>>) {

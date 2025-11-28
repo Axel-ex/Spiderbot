@@ -61,7 +61,7 @@ You must power the servos separately from the ESP32. The ESP32's onboard regulat
 
 * Connect your **5V 3A+ power supply** + terminal to the V+ terminal on the PCA9685. This powers the servos.
 * Connect the power supply - terminal to the GND terminal on the PCA9685.
-* **Important:** Ensure the ESP32's GND is also connected to the power supply's GND to create a common ground reference.
+* **Important:** Ensure the ESP32's GND is also connected to the power supply's GND to create a common ground reference. Do not power the servos from the esp32 and use a dedicated power supply!!
 
 #### Servo Connections
 
@@ -87,24 +87,24 @@ The software is divided into three primary asynchronous tasks:
    * Connects the ESP32 to your local Wi-Fi network.
    * Starts a TCP server on port 1234.
    * Listens for incoming string-based commands (e.g., `sf 4`).
-   * Parses these commands and sends them to the `motion_task` for execution.
-2. **motion_task:**
+   * Parses these commands and sends them to the `gait_task` for execution.
+2. **gait_task:**
    * The "brain" of the robot. It receives high-level commands from the `net_task`.
    * Uses a `GaitEngine` state machine to translate simple commands into a sequence of precise leg movements.
    * Calculates the target Cartesian coordinates (X, Y, Z) for each leg's endpoint.
    * Sends this position data to the `servo_task`.
 3. **servo_task:**
    * Directly interfaces with the hardware.
-   * Receives target coordinates and movement speeds from the `motion_task`.
+   * Receives target coordinates and movement speeds from the `gait_task`.
    * Performs **inverse kinematics** calculations (see `conversion.rs`) to convert the (X, Y, Z) coordinates into the three required servo angles (alpha, beta, gamma) for each leg.
-   * Smoothly interpolates the servo positions from their current state to the target state, preventing jerky movements.
+   * Interpolates the servo positions from their current state to the target state, using a step preventing jerky movements.
    * Communicates with the PCA9685 driver over I2C to set the final PWM signals for each servo.
 
-The original project relied heavily on global shared state, which made it difficult to reason about ownership and mutation. This implementation keeps ownership clear: the `motion_task` manages the robot pose, and the `servo_task` focuses solely on driving PWM signals.
+The original project relied heavily on global shared state, which made it difficult to reason about ownership and mutation. This implementation tries to keep ownership clear: the `gait_task` manages the robot pose, and the `servo_task` focuses solely on driving PWM signals.
 
 ### Why a PCA9685 Servo Driver?
 
-While the ESP32 has a built-in PWM generator (`ledc`), it's not ideal for robotics applications requiring synchronised multi-joint movement (learned the hard way). The 16 ledc channels can not share one single timer, and having the timer in sync is a non trivial task.  When you command a leg to move, its three servos need to start and stop turning at *precisely* the same time for smooth, coordinated motion.
+While the ESP32 has a built-in PWM generator (`ledc`), it's not ideal for robotics applications requiring synchronised multi-joint movement (I learned it the hard way...). The 16 ledc channels can not share one single timer, and having the timer in sync is a non trivial task.  When you command a leg to move, its three servos need to start and stop turning at *precisely* the same time for smooth, coordinated motion.
 
 The **PCA9685** solves this problem. It's a dedicated I2C PWM driver that allows you to update the pulse width for all 16 channels in a single, atomic-like operation. The firmware can calculate the positions for all 12 servos and send the update command, ensuring all servos refresh in unison. The result is the fluid, life-like motion essential for a legged robot.
 
@@ -182,7 +182,7 @@ telnet 192.168.1.123 1234
 ## Troubleshooting
 
 * **Robot doesn't connect to Wi-Fi:** Double-check your SSID and password in `.cargo/config.toml`. Check the serial monitor for any error messages from the ESP32.
-* **Servos are jittery or don't move:** This is almost always a power issue. Verify that your 5V supply can provide at least 3A and that the wires are thick enough. Adding a large capacitor (e.g., 1000µF) across the V+ and GND rails of the PCA9685 can help smooth out power delivery.
+* **Servos are jittery or don't move:** This is almost always a power issue. Verify that your 5V supply can provide at least 3A and that the wires are thick enough. Adding a large capacitor (e.g., 1000µF) across the V+ and GND rails of the PCA9685 can help smooth out power delivery. 
 * **Robot doesn't respond to commands:**
   * Confirm you have the correct IP address from the serial monitor.
   * Check your I2C wiring between the ESP32 and PCA9685.

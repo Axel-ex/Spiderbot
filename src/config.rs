@@ -5,6 +5,30 @@
 //!
 //! Used throughout the firmware for calculations and hardware interfacing.
 use micromath::F32Ext;
+use pwm_pca9685::Channel;
+
+pub const SERVOCMD_CHANNEL_SIZE: usize = 4;
+pub const TCPCMD_CHANNEL_SIZE: usize = 4;
+
+pub const PORT: u16 = 1234;
+pub const RX_BUF_SIZE: usize = 128;
+pub const TX_BUF_SIZE: usize = 128;
+
+// --- Servo Configuration ---
+pub const SERVO_MIN_PULSE_US: f32 = 544.0;
+pub const SERVO_MAX_PULSE_US: f32 = 2400.0;
+pub const SERVO_ANGLE_RANGE: f32 = 180.0;
+pub const PCA_FREQUENCY_HZ: u32 = 50;
+pub const PCA_PERIOD_US: f32 = 1_000_000.0 / PCA_FREQUENCY_HZ as f32; // 20000 µs
+pub const PRESCALE_REG_SIZE: f32 = 4096.0;
+
+//[femur, tibia, coxa]
+pub static SERVO_CHANNEL_MAP: [[Channel; 3]; 4] = [
+    [Channel::C15, Channel::C14, Channel::C13], // front left
+    [Channel::C12, Channel::C11, Channel::C10], // bottom left
+    [Channel::C0, Channel::C1, Channel::C2],    // front right
+    [Channel::C3, Channel::C4, Channel::C5],    // bottom right
+];
 
 // ROBOT SIZE
 pub const LENGTH_A: f32 = 55.0;

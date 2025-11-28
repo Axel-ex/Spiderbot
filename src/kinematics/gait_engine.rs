@@ -4,8 +4,8 @@
 //! including tripod gait sequencing and trajectory interpolation.
 //!
 //! Used by the motion task to generate step patterns and synchronize legs.
-use crate::robot::{commands::ServoCommand, config::*, leg::Leg};
-use crate::SERVOCMD_CHANNEL_SIZE;
+use crate::config::*;
+use crate::robot::{commands::ServoCommand, leg::Leg};
 use core::f32;
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Sender, signal::Signal};
 use embassy_time::{with_timeout, Duration};

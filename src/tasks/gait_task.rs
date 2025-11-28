@@ -14,7 +14,7 @@ use embassy_sync::{
 use log::{debug, info};
 
 #[embassy_executor::task]
-pub async fn motion_task(
+pub async fn gait_task(
     tcp_cmd_receiver: Receiver<'static, CriticalSectionRawMutex, TcpCommand, TCPCMD_CHANNEL_SIZE>,
     servo_cmd_sender: Sender<'static, CriticalSectionRawMutex, ServoCommand, SERVOCMD_CHANNEL_SIZE>,
 ) {

@@ -8,6 +8,5 @@
 //!
 //! These types are used throughout the firmware for movement, configuration, and control.
 pub mod commands;
-pub mod config;
 pub mod joint;
 pub mod leg;
