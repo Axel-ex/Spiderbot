@@ -4,9 +4,9 @@
   <img src=".assets/demo.jpg" width="60%" alt="ESP32-powered quadruped spider robot" />
 </div>
 
-This repository contains the firmware for a 3D-printable, Wi-Fi controlled quadruped (spider) robot. The robot is powered by an ESP32 microcontroller, and the firmware is written entirely in Rust using the Embassy asynchronous framework for predictable, real-time performance.
+This repository contains the firmware for a 3D-printable, Wi-Fi controlled quadruped (spider) robot. The robot is powered by an ESP32 microcontroller, and the firmware is written entirely in Rust using the Embassy asynchronous framework for real-time performance.
 
-The project draws heavy inspiration from the [DIY Spider Robot](https://www.instructables.com/DIY-Spider-RobotQuad-robot-Quadruped/) on Instructables while modernising the software stack with Rust.
+The project was entirely inspired from [DIY Spider Robot](https://www.instructables.com/DIY-Spider-RobotQuad-robot-Quadruped/) on Instructables while trying to adapt and modernise the software stack with Rust. I also wanted to use hardware that includes network functionalities since the original project relies on an Arduino nano connected with a Bluetooth transceiver.
 
 ## Table of Contents
 
@@ -27,9 +27,9 @@ The project draws heavy inspiration from the [DIY Spider Robot](https://www.inst
 
 ## Introduction
 
-This project aims to provide an accessible yet advanced robotic platform. By combining the Wi-Fi-enabled ESP32 with the safety and concurrency guarantees of Rust, the robot can execute complex movements while remaining resilient to runtime errors. The quadruped has 12 degrees of freedom (three per leg) and uses inverse kinematics to calculate the joint angles required to position its feet in 3D space.
+This project aims mainly to share my experience using embedded rust to achieve cool connected devices. By combining the Wi-Fi-enabled ESP32, cargo as a project manager and the asynchronous runtime of embassy, you can write safe and expressive firmware and have a great time doing it. The quadruped has 12 degrees of freedom (three per leg) and uses inverse kinematics to calculate the joint angles required to position its feet in 3D space.
 
-Remote control is handled over Wi-Fi through a lightweight TCP server running on the ESP32, allowing you to send commands from any computer on the same network.
+Remote control is handled over Wi-Fi through a TCP socket running on the ESP32, allowing you to send commands from any computer on the same network as the robot.
 
 ## Hardware
 
@@ -48,7 +48,7 @@ Remote control is handled over Wi-Fi through a lightweight TCP server running on
 
 #### ESP32 Connections
 
-You must power the servos separately from the ESP32. The ESP32's onboard regulator cannot supply the high current the 12 servos require.
+You must power the servos separately from the ESP32!! The ESP32's onboard regulator cannot supply the high current the 12 servos require.
 
 | ESP32 Pin | Connects to |
 | :---- | :---- |
@@ -61,7 +61,7 @@ You must power the servos separately from the ESP32. The ESP32's onboard regulat
 
 * Connect your **5V 3A+ power supply** + terminal to the V+ terminal on the PCA9685. This powers the servos.
 * Connect the power supply - terminal to the GND terminal on the PCA9685.
-* **Important:** Ensure the ESP32's GND is also connected to the power supply's GND to create a common ground reference. Do not power the servos from the esp32 and use a dedicated power supply!!
+* **Important:** Ensure the ESP32's GND is also connected to the power supply's GND to create a common ground reference.
 
 #### Servo Connections
 
@@ -91,8 +91,7 @@ The software is divided into three primary asynchronous tasks:
 2. **gait_task:**
    * The "brain" of the robot. It receives high-level commands from the `net_task`.
    * Uses a `GaitEngine` state machine to translate simple commands into a sequence of precise leg movements.
-   * Calculates the target Cartesian coordinates (X, Y, Z) for each leg's endpoint.
-   * Sends this position data to the `servo_task`.
+   * Sends the expected position data of the legs to the `servo_task` following a sequence of prerecorded gaits.
 3. **servo_task:**
    * Directly interfaces with the hardware.
    * Receives target coordinates and movement speeds from the `gait_task`.
@@ -114,7 +113,7 @@ ESP32 also has better suited peripherals for motor control namely `mcpwm`, or ev
 
 ###  Assembly
 
-First, 3D print and assemble the robot's chassis and legs. Follow the excellent guide provided in the original [Instructables project](https://www.instructables.com/DIY-Spider-RobotQuad-robot-Quadruped/).
+First, 3D print and assemble the robot's chassis and legs. Follow the excellent guide provided in the original [Instructables project](https://www.instructables.com/DIY-Spider-RobotQuad-robot-Quadruped/). Specially before mounting the horns on the servos, you need to make sure that all servos are positioned on 0. The guide has firmware you can use to achieve that. 
 
 ### Wiring
 
