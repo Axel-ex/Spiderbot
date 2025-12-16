@@ -1,5 +1,5 @@
 [target.xtensa-esp32-none-elf]
-runner = "espflash flash --monitor --chip esp32"
+runner = "espflash flash --monitor --chip esp32c3"
 
 [env]
 ESP_LOG="info"
@@ -8,10 +8,13 @@ WIFI_PASS="YOUR_PASS"
 
 [build]
 rustflags = [
-  "-C", "link-arg=-nostartfiles",
+  # Required to obtain backtraces (e.g. when using the "esp-backtrace" crate.)
+  # NOTE: May negatively impact performance of produced code
+  "-C", "force-frame-pointers",
+  "-Z", "stack-protector=all",
 ]
 
-target = "xtensa-esp32-none-elf"
+target = "riscv32imc-unknown-none-elf"
 
 [unstable]
 build-std = ["alloc", "core"]

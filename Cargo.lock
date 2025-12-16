@@ -618,7 +618,6 @@ dependencies = [
  "esp-metadata",
  "esp-println",
  "heapless",
- "semihosting",
 ]
 
 [[package]]
@@ -686,7 +685,7 @@ dependencies = [
  "esp-hal-procmacros",
  "esp-metadata",
  "esp-riscv-rt",
- "esp32",
+ "esp32c3",
  "fugit",
  "instability",
  "log",
@@ -808,7 +807,6 @@ dependencies = [
  "portable_atomic_enum",
  "rand_core 0.9.3",
  "smoltcp",
- "xtensa-lx-rt",
 ]
 
 [[package]]
@@ -822,10 +820,10 @@ dependencies = [
 ]
 
 [[package]]
-name = "esp32"
-version = "0.37.0"
+name = "esp32c3"
+version = "0.29.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "83ddfdb413ef0739d84bd3fce771e6e0feb6457ac1bcdd7a1dcd6326061e919d"
+checksum = "24c0b2a8e8efa1755a28ca3ef54c85436f76531ba93dc79b55d5330349d067d7"
 dependencies = [
  "critical-section",
  "vcell",
@@ -1435,12 +1433,6 @@ name = "scopeguard"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "94143f37725109f92c262ed2cf5e59bce7498c01bcc1502d7b9afe439a4e9f49"
-
-[[package]]
-name = "semihosting"
-version = "0.1.20"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "c3e1c7d2b77d80283c750a39c52f1ab4d17234e8f30bca43550f5b2375f41d5f"
 
 [[package]]
 name = "serde"

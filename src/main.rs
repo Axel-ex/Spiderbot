@@ -57,8 +57,7 @@ async fn main(spawner: Spawner) {
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let p = esp_hal::init(config);
 
-    esp_alloc::heap_allocator!(size: 32 * 1024);
-    esp_alloc::heap_allocator!(#[unsafe(link_section = ".dram2_uninit")] size: 96 * 1024);
+    esp_alloc::heap_allocator!(#[unsafe(link_section = ".dram2_uninit")] size: 66320);
 
     // Start the embassy runtime
     let timer0 = TimerGroup::new(p.TIMG1);
@@ -88,8 +87,8 @@ async fn main(spawner: Spawner) {
     // I2c
     let i2c_dev = I2c::new(p.I2C0, Config::default())
         .unwrap()
-        .with_sda(p.GPIO21)
-        .with_scl(p.GPIO22)
+        .with_sda(p.GPIO8)
+        .with_scl(p.GPIO9)
         .into_async();
 
     //Pca9685
