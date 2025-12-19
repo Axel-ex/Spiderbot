@@ -22,7 +22,9 @@ pub mod tasks;
 use crate::config::{SERVOCMD_CHANNEL_SIZE, TCPCMD_CHANNEL_SIZE};
 use crate::robot::commands::{ServoCommand, TcpCommand};
 use crate::tasks::gait_task::gait_task;
-use crate::tasks::net_task::{configurate_and_start_wifi, net_task, runner_task};
+use crate::tasks::net_task::{
+    configurate_and_start_wifi, net_task, runner_task, set_wifi_debug_handler,
+};
 use crate::tasks::servo_task::servo_task;
 
 use core::future::pending;
@@ -54,10 +56,12 @@ macro_rules! mk_static {
 async fn main(spawner: Spawner) {
     //Boilerplate to init clocks, setup the heap and take important peripherals
     esp_println::logger::init_logger_from_env();
+
     let config = esp_hal::Config::default().with_cpu_clock(CpuClock::max());
     let p = esp_hal::init(config);
 
     esp_alloc::heap_allocator!(#[unsafe(link_section = ".dram2_uninit")] size: 66320);
+    set_wifi_debug_handler();
 
     // Start the embassy runtime
     let timer0 = TimerGroup::new(p.TIMG1);

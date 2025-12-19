@@ -14,7 +14,8 @@ use core::str::FromStr;
 use embassy_net::{tcp::TcpSocket, IpListenEndpoint, Stack};
 use embassy_sync::{blocking_mutex::raw::CriticalSectionRawMutex, channel::Sender};
 use embassy_time::Timer;
-use esp_wifi::wifi::{ClientConfiguration, WifiController, WifiDevice};
+use esp_wifi::wifi::event::EventExt;
+use esp_wifi::wifi::{event, ClientConfiguration, WifiController, WifiDevice};
 use log::{error, info, warn};
 
 #[embassy_executor::task]
@@ -56,7 +57,7 @@ pub async fn net_task(
                 handle_connection(&mut socket, &cmd_sender).await;
             }
             Err(e) => {
-                error!("Accept failed: {:?}", e);
+                error!("Accept failed: {e:?}");
                 Timer::after_millis(500).await; // Backoff delay
                 continue;
             }
@@ -82,11 +83,11 @@ pub async fn handle_connection(
                         _ => cmd_sender.send(cmd).await,
                     }
                 } else {
-                    warn!("Unrecognised command: {}", received_str);
+                    warn!("Unrecognised command: {received_str}");
                 }
             }
             Err(e) => {
-                error!("Read error: {:?}", e);
+                error!("Read error: {e:?}");
                 break;
             }
         }
@@ -102,7 +103,7 @@ pub async fn configurate_and_start_wifi(wifi_controller: &mut WifiController<'_>
         ..Default::default()
     });
 
-    info!("Connecting to wifi: {ssid}");
+    info!("Connecting to wifi: {ssid}, {password}");
     wifi_controller
         .set_configuration(&config)
         .expect("fail setting configuration of wifi controller");
@@ -112,6 +113,8 @@ pub async fn configurate_and_start_wifi(wifi_controller: &mut WifiController<'_>
         .expect("Fail setting wifi power mode");
 
     wifi_controller.start().unwrap();
+    Timer::after_secs(2).await;
+    do_wifi_scan(wifi_controller).await;
     wifi_controller
         .connect_async()
         .await
@@ -119,6 +122,31 @@ pub async fn configurate_and_start_wifi(wifi_controller: &mut WifiController<'_>
         .unwrap();
 
     if let Ok(rssi) = wifi_controller.rssi() {
-        info!("Wifi connected! signal: {}", rssi)
+        info!("Wifi connected! signal: {rssi}")
+    }
+}
+
+pub fn set_wifi_debug_handler() {
+    event::StaDisconnected::update_handler(|ev| {
+        let reason = ev.0.reason;
+        let rssi = ev.0.rssi;
+        error!(" STA_DISCONNECTED: reason: {reason}, rssi: {rssi}");
+    });
+}
+
+pub async fn do_wifi_scan(wifi_controller: &mut WifiController<'_>) {
+    Timer::after_millis(300).await; // let driver settle after start
+
+    match wifi_controller.scan_n_async(20).await {
+        Ok(results) => {
+            info!("WiFi scan done, found {} APs", results.len());
+            for ap in results {
+                info!(
+                    "SSID: {}, channel: {}, rssi: {}, auth: {:?}",
+                    ap.ssid, ap.channel, ap.signal_strength, ap.auth_method
+                );
+            }
+        }
+        Err(e) => error!("WiFi scan failed: {e:?}"),
     }
 }
